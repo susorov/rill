@@ -1,0 +1,71 @@
+name: Rill Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        include:
+          - os: macos-15
+            platform: macos-arm64
+          - os: macos-15-intel
+            platform: macos-x64
+          - os: ubuntu-24.04
+            platform: linux-x64
+          - os: ubuntu-24.04-arm
+            platform: linux-arm64
+          - os: windows-2025
+            platform: windows-x64
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build
+        run: cargo build --release -p rill-cli --locked
+
+      - name: Package Unix
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          mkdir dist
+          tar -czf "dist/rill-${{ github.ref_name }}-${{ matrix.platform }}.tar.gz" \
+            -C target/release rill
+
+      - name: Package Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          mkdir dist
+          Compress-Archive -Path target/release/rill.exe `
+            -DestinationPath "dist/rill-${{ github.ref_name }}-${{ matrix.platform }}.zip"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rill-${{ matrix.platform }}
+          path: dist/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: rill-*
+          path: dist
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          files: dist/*
+          prerelease: ${{ contains(github.ref_name, '-') }}
