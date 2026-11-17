@@ -19,7 +19,7 @@ Download the appropriate binary from [GitHub Releases](https://github.com/susoro
 For example, on macOS Apple Silicon:
 
 ```bash
-tar -xzf rill-v0.1.0-alpha.1-macos-arm64.tar.gz
+tar -xzf rill-v0.1.0-alpha.2-macos-arm64.tar.gz
 chmod +x rill
 ./rill --version
 ```
@@ -35,14 +35,10 @@ Ensure `~/.local/bin` is included in your `PATH` to run `rill` from anywhere.
 
 ## Usage
 
-The initial CLI supports version reporting:
-
 ```bash
-rill --version
+rill hello.rill
 ```
 
-Output:
+Only files with the .rill extension are accepted.
 
-```text
-rill 0.1.0-alpha.1
-```
+The command prints the syntax tree. It does not execute the program yet. Syntax errors include the file name, line and column. Errors return a nonzero exit status.
