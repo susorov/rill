@@ -6,12 +6,17 @@ version = 4
 name = "rill-cli"
 version = "0.1.0-alpha.2"
 dependencies = [
+ "rill-compiler",
  "rill-syntax",
 ]
 
 [[package]]
 name = "rill-compiler"
 version = "0.1.0-alpha.2"
+dependencies = [
+ "rill-syntax",
+ "rill-vm",
+]
 
 [[package]]
 name = "rill-syntax"

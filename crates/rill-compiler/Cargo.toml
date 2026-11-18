@@ -5,3 +5,5 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+rill-syntax = { path = "../rill-syntax" }
+rill-vm = { path = "../rill-vm" }
