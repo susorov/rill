@@ -64,18 +64,33 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expression(&mut self) -> Result<Expression, ParseError> {
-        let token = self.expect(TokenKind::Integer, "expected an integer")?;
-        let value = self.source[token.span.start..token.span.end]
-            .parse::<i64>()
-            .map_err(|_| ParseError {
-                message: "integer literal is out of range for i64".to_owned(),
-                span: token.span.clone(),
-            })?;
+        let token = self.current();
 
-        Ok(Expression {
-            kind: ExpressionKind::Integer(value),
-            span: token.span.clone(),
-        })
+        let kind = match token.kind {
+            TokenKind::Integer => {
+                let value = self.source[token.span.start..token.span.end]
+                    .parse::<i64>()
+                    .map_err(|_| ParseError {
+                        message: "integer literal is out of range for i64".into(),
+                        span: token.span.clone(),
+                    })?;
+
+                ExpressionKind::Integer(value)
+            }
+
+            TokenKind::Identifier => {
+                let name = self.source[token.span.start..token.span.end].to_owned();
+
+                ExpressionKind::Identifier(name)
+            }
+
+            _ => return Err(self.error("expected an expression")),
+        };
+
+        let span = token.span.clone();
+        self.pos += 1;
+
+        Ok(Expression { kind, span })
     }
 
     fn current(&self) -> &'a Token {
@@ -121,6 +136,48 @@ mod tests {
                 }],
             }
         );
+    }
+
+    #[test]
+    fn parses_identifier_expressions_with_source_spans() {
+        for name in ["count", "let_count", "_count2"] {
+            let source = format!("let limit = {name}");
+            let end = 12 + name.len();
+
+            assert_eq!(
+                parse(&source).unwrap(),
+                Program {
+                    statements: vec![Statement::Let {
+                        name: "limit".to_owned(),
+                        value: Expression {
+                            kind: ExpressionKind::Identifier(name.to_owned()),
+                            span: Span::new(12, end),
+                        },
+                        span: Span::new(0, end),
+                    }],
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn parses_chained_variable_references() {
+        for newline in ["\n", "\r\n", "\r"] {
+            let source = format!(
+                "let count = 42{newline}let limit = count{newline}let maximum = limit{newline}"
+            );
+            let program = parse(&source).unwrap();
+
+            assert_eq!(program.statements.len(), 3);
+            for (statement, expected) in program.statements.iter().zip([
+                ExpressionKind::Integer(42),
+                ExpressionKind::Identifier("count".to_owned()),
+                ExpressionKind::Identifier("limit".to_owned()),
+            ]) {
+                let Statement::Let { value, .. } = statement;
+                assert_eq!(value.kind, expected);
+            }
+        }
     }
 
     #[test]
@@ -171,9 +228,10 @@ mod tests {
             ("let let = 1", "expected an identifier", 4, 7),
             ("let x", "expected '='", 5, 5),
             ("let x 1", "expected '='", 6, 7),
-            ("let x =", "expected an integer", 7, 7),
-            ("let x = y", "expected an integer", 8, 9),
-            ("let x =\n1", "expected an integer", 7, 8),
+            ("let x =", "expected an expression", 7, 7),
+            ("let x = let", "expected an expression", 8, 11),
+            ("let x = =", "expected an expression", 8, 9),
+            ("let x =\n1", "expected an expression", 7, 8),
         ] {
             assert_eq!(
                 parse(source).unwrap_err(),
@@ -188,7 +246,13 @@ mod tests {
 
     #[test]
     fn rejects_trailing_tokens_on_the_same_line() {
-        for (source, end) in [("let x = 1 let y = 2", 13), ("let x = 1 y", 11)] {
+        for (source, end) in [
+            ("let x = 1 let y = 2", 13),
+            ("let x = 1 y", 11),
+            ("let x = y let z = 2", 13),
+            ("let x = y z", 11),
+            ("let x = y 1", 11),
+        ] {
             assert_eq!(
                 parse(source).unwrap_err(),
                 ParseError {
