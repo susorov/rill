@@ -8,6 +8,7 @@ pub enum TokenKind {
     // Values
     Identifier,
     Integer,
+    Boolean,
 
     // Operators
     Equal,

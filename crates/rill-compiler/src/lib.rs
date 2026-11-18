@@ -61,6 +61,7 @@ impl Compiler {
     fn compile_expression(&mut self, expression: &Expression) -> Result<(), CompileError> {
         let instruction = match &expression.kind {
             ExpressionKind::Integer(value) => Instruction::PushInteger(*value),
+            ExpressionKind::Boolean(value) => Instruction::PushBoolean(*value),
             ExpressionKind::Identifier(name) => {
                 let slot = self.locals.get(name).ok_or_else(|| CompileError {
                     message: format!("undefined variable '{name}'"),
@@ -78,8 +79,30 @@ impl Compiler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use Instruction::{LoadLocal, PushInteger, StoreLocal};
+    use Instruction::{LoadLocal, PushBoolean, PushInteger, StoreLocal};
     use rill_syntax::parser::parse;
+
+    #[test]
+    fn compiles_boolean_literals_and_references() {
+        for (literal, value) in [("true", true), ("false", false)] {
+            let source = format!("let enabled = {literal}\nlet copy = enabled\nlet count = 42");
+
+            assert_eq!(
+                compile(&parse(&source).unwrap()).unwrap(),
+                Bytecode {
+                    instructions: vec![
+                        PushBoolean(value),
+                        StoreLocal(0),
+                        LoadLocal(0),
+                        StoreLocal(1),
+                        PushInteger(42),
+                        StoreLocal(2),
+                    ],
+                    local_count: 3,
+                }
+            );
+        }
+    }
 
     #[test]
     fn compiles_empty_program() {

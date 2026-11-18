@@ -1,0 +1,6 @@
+let enabled = true
+let active = enabled
+let ready = active
+
+let disabled = false
+let paused = disabled

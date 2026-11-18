@@ -23,5 +23,6 @@ pub struct Expression {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExpressionKind {
     Integer(i64),
+    Boolean(bool),
     Identifier(String),
 }

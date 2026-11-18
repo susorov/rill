@@ -78,6 +78,17 @@ impl<'a> Parser<'a> {
                 ExpressionKind::Integer(value)
             }
 
+            TokenKind::Boolean => {
+                let value = self.source[token.span.start..token.span.end]
+                    .parse::<bool>()
+                    .map_err(|_| ParseError {
+                        message: "bool literal should be true or false".into(),
+                        span: token.span.clone(),
+                    })?;
+
+                ExpressionKind::Boolean(value)
+            }
+
             TokenKind::Identifier => {
                 let name = self.source[token.span.start..token.span.end].to_owned();
 
@@ -118,6 +129,43 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parses_boolean_declarations_with_source_spans() {
+        for (literal, value) in [("true", true), ("false", false)] {
+            let source = format!("let enabled = {literal}");
+            let end = 14 + literal.len();
+
+            assert_eq!(
+                parse(&source).unwrap(),
+                Program {
+                    statements: vec![Statement::Let {
+                        name: "enabled".to_owned(),
+                        value: Expression {
+                            kind: ExpressionKind::Boolean(value),
+                            span: Span::new(14, end),
+                        },
+                        span: Span::new(0, end),
+                    }],
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_boolean_literals_as_variable_names() {
+        for literal in ["true", "false"] {
+            let source = format!("let {literal} = 42");
+
+            assert_eq!(
+                parse(&source).unwrap_err(),
+                ParseError {
+                    message: "expected an identifier".to_owned(),
+                    span: Span::new(4, 4 + literal.len()),
+                }
+            );
+        }
+    }
 
     #[test]
     fn parses_declaration_with_source_spans() {

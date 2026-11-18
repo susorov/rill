@@ -63,6 +63,7 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
 
                 match &source[start..pos] {
                     "let" => TokenKind::Let,
+                    "true" | "false" => TokenKind::Boolean,
                     _ => TokenKind::Identifier,
                 }
             }
@@ -95,6 +96,30 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn recognizes_boolean_literals_with_source_spans() {
+        let tokens = tokenize("true false").unwrap();
+
+        assert_eq!(tokens.len(), 3);
+        assert_eq!(tokens[0].kind, TokenKind::Boolean);
+        assert_eq!(tokens[0].span, Span::new(0, 4));
+        assert_eq!(tokens[1].kind, TokenKind::Boolean);
+        assert_eq!(tokens[1].span, Span::new(5, 10));
+        assert_eq!(tokens[2].kind, TokenKind::Eof);
+    }
+
+    #[test]
+    fn keeps_boolean_like_names_as_identifiers() {
+        for source in ["true_value", "false_count", "true1", "falsehood", "bool"] {
+            let tokens = tokenize(source).unwrap();
+
+            assert_eq!(tokens.len(), 2);
+            assert_eq!(tokens[0].kind, TokenKind::Identifier);
+            assert_eq!(tokens[0].span, Span::new(0, source.len()));
+            assert_eq!(tokens[1].kind, TokenKind::Eof);
+        }
+    }
 
     #[test]
     fn tokenizes_declaration() {
