@@ -36,6 +36,16 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
                 TokenKind::Newline
             }
 
+            b'/' if bytes.get(pos + 1) == Some(&b'/') => {
+                pos += 2;
+
+                while pos < bytes.len() && bytes[pos] != b'\n' && bytes[pos] != b'\r' {
+                    pos += 1;
+                }
+
+                continue;
+            }
+
             b'=' => {
                 pos += 1;
                 TokenKind::Equal
@@ -98,6 +108,46 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn preserves_newlines_and_byte_offsets_after_comments() {
+        let comment = "// comment";
+        for newline in ["\n", "\r\n", "\r"] {
+            let source = format!("{comment}{newline}let x = 42");
+            let start = comment.len() + newline.len();
+            let tokens = tokenize(&source).unwrap();
+
+            assert_eq!(
+                tokens.iter().map(|t| t.kind).collect::<Vec<_>>(),
+                vec![
+                    TokenKind::Newline,
+                    TokenKind::Let,
+                    TokenKind::Identifier,
+                    TokenKind::Equal,
+                    TokenKind::Integer,
+                    TokenKind::Eof,
+                ]
+            );
+            assert_eq!(tokens[0].span, Span::new(comment.len(), start));
+            assert_eq!(tokens[1].span, Span::new(start, start + 3));
+            assert_eq!(tokens[4].span, Span::new(start + 8, start + 10));
+            assert_eq!(tokens[5].span, Span::new(source.len(), source.len()));
+        }
+    }
+
+    #[test]
+    fn rejects_slashes_that_do_not_start_line_comments() {
+        for source in ["/", "/ /", "/* comment */", "let x = 42 / 2"] {
+            let start = source.find('/').unwrap();
+            assert_eq!(
+                tokenize(source).unwrap_err(),
+                LexError {
+                    message: "unexpected character '/'".to_owned(),
+                    span: Span::new(start, start + 1),
+                }
+            );
+        }
+    }
 
     #[test]
     fn recognizes_boolean_literals_with_source_spans() {

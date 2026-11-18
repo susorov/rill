@@ -1,0 +1,7 @@
+// Integer and boolean declarations
+let count = 42 // Initial value
+let enabled = true
+
+// References to earlier variables
+let limit = count
+let active = enabled // Boolean reference
