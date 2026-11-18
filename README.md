@@ -19,7 +19,7 @@ Download the appropriate binary from [GitHub Releases](https://github.com/susoro
 For example, on macOS Apple Silicon:
 
 ```bash
-tar -xzf rill-v0.1.0-alpha.2-macos-arm64.tar.gz
+tar -xzf rill-v0.1.0-alpha.3-macos-arm64.tar.gz
 chmod +x rill
 ./rill --version
 ```
@@ -42,5 +42,3 @@ rill hello.rill
 Only files with the .rill extension are accepted.
 
 The command compiles the source and prints the bytecode instructions. It does not execute the program yet. Syntax and compilation errors include the file name, line and column. Errors return a nonzero exit status.
-
-Variables must be declared before they are referenced. A later declaration with the same name creates a new binding. Its initializer can reference the earlier binding.
