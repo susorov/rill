@@ -35,6 +35,12 @@ impl Compiler {
     fn compile_statement(&mut self, statement: &Statement) -> Result<(), CompileError> {
         match statement {
             Statement::Let { name, value, span } => {
+                if self.locals.contains_key(name) {
+                    return Err(CompileError {
+                        message: format!("variable '{name}' is already declared"),
+                        span: span.clone(),
+                    });
+                }
                 self.compile_expression(value)?;
 
                 let slot = self.bytecode.local_count;
@@ -132,21 +138,32 @@ mod tests {
     }
 
     #[test]
-    fn shadowing_reads_previous_binding_and_allocates_new_slot() {
-        let program = parse("let x = 42\nlet x = x\nlet y = x").unwrap();
+    fn rejects_duplicate_declarations() {
+        for (source, start, end) in [
+            ("let x = 42\nlet x = 10", 11, 21),
+            ("let x = 42\nlet x = x", 11, 20),
+            ("let x = 42\nlet y = x\nlet x = 10", 21, 31),
+        ] {
+            assert_eq!(
+                compile(&parse(source).unwrap()).unwrap_err(),
+                CompileError {
+                    message: "variable 'x' is already declared".to_owned(),
+                    span: Span::new(start, end),
+                },
+                "source: {source:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_duplicate_before_resolving_initializer() {
+        let program = parse("let x = 42\nlet x = missing").unwrap();
 
         assert_eq!(
-            compile(&program).unwrap(),
-            Bytecode {
-                instructions: vec![
-                    PushInteger(42),
-                    StoreLocal(0),
-                    LoadLocal(0),
-                    StoreLocal(1),
-                    LoadLocal(1),
-                    StoreLocal(2),
-                ],
-                local_count: 3,
+            compile(&program).unwrap_err(),
+            CompileError {
+                message: "variable 'x' is already declared".to_owned(),
+                span: Span::new(11, 26),
             }
         );
     }
