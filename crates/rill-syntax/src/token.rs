@@ -4,6 +4,8 @@ use crate::span::Span;
 pub enum TokenKind {
     // Keywords
     Let,
+    Int,
+    Bool,
 
     // Values
     Identifier,

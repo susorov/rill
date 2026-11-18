@@ -153,15 +153,30 @@ mod tests {
     }
 
     #[test]
-    fn rejects_boolean_literals_as_variable_names() {
-        for literal in ["true", "false"] {
-            let source = format!("let {literal} = 42");
+    fn rejects_reserved_words_as_variable_names() {
+        for keyword in ["let", "true", "false", "int", "bool"] {
+            let source = format!("let {keyword} = 42");
 
             assert_eq!(
                 parse(&source).unwrap_err(),
                 ParseError {
                     message: "expected an identifier".to_owned(),
-                    span: Span::new(4, 4 + literal.len()),
+                    span: Span::new(4, 4 + keyword.len()),
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_type_keywords_as_expressions() {
+        for keyword in ["int", "bool"] {
+            let source = format!("let value = {keyword}");
+
+            assert_eq!(
+                parse(&source).unwrap_err(),
+                ParseError {
+                    message: "expected an expression".to_owned(),
+                    span: Span::new(12, 12 + keyword.len()),
                 }
             );
         }

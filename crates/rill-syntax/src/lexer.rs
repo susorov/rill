@@ -63,6 +63,8 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
 
                 match &source[start..pos] {
                     "let" => TokenKind::Let,
+                    "int" => TokenKind::Int,
+                    "bool" => TokenKind::Bool,
                     "true" | "false" => TokenKind::Boolean,
                     _ => TokenKind::Identifier,
                 }
@@ -110,8 +112,19 @@ mod tests {
     }
 
     #[test]
-    fn keeps_boolean_like_names_as_identifiers() {
-        for source in ["true_value", "false_count", "true1", "falsehood", "bool"] {
+    fn keeps_keyword_like_names_as_identifiers() {
+        for source in [
+            "true_value",
+            "false_count",
+            "true1",
+            "falsehood",
+            "int_value",
+            "integer",
+            "int2",
+            "bool_value",
+            "boolean",
+            "bool2",
+        ] {
             let tokens = tokenize(source).unwrap();
 
             assert_eq!(tokens.len(), 2);
@@ -119,6 +132,18 @@ mod tests {
             assert_eq!(tokens[0].span, Span::new(0, source.len()));
             assert_eq!(tokens[1].kind, TokenKind::Eof);
         }
+    }
+
+    #[test]
+    fn recognizes_reserved_type_names() {
+        let tokens = tokenize("int bool").unwrap();
+
+        assert_eq!(tokens.len(), 3);
+        assert_eq!(tokens[0].kind, TokenKind::Int);
+        assert_eq!(tokens[0].span, Span::new(0, 3));
+        assert_eq!(tokens[1].kind, TokenKind::Bool);
+        assert_eq!(tokens[1].span, Span::new(4, 8));
+        assert_eq!(tokens[2].kind, TokenKind::Eof);
     }
 
     #[test]
