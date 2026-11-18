@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Bytecode {
     pub instructions: Vec<Instruction>,
@@ -12,4 +14,14 @@ pub enum Instruction {
     StoreLocal(u32),
     /// Copy a local slot's value onto the operand stack.
     LoadLocal(u32),
+}
+
+impl fmt::Display for Instruction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::PushInteger(value) => write!(f, "PUSH_INTEGER {value}"),
+            Self::StoreLocal(slot) => write!(f, "STORE_LOCAL {slot}"),
+            Self::LoadLocal(slot) => write!(f, "LOAD_LOCAL {slot}"),
+        }
+    }
 }

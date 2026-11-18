@@ -41,4 +41,6 @@ rill hello.rill
 
 Only files with the .rill extension are accepted.
 
-The command prints the syntax tree. It does not execute the program yet. Syntax errors include the file name, line and column. Errors return a nonzero exit status.
+The command compiles the source and prints the bytecode instructions. It does not execute the program yet. Syntax and compilation errors include the file name, line and column. Errors return a nonzero exit status.
+
+Variables must be declared before they are referenced. A later declaration with the same name creates a new binding. Its initializer can reference the earlier binding.

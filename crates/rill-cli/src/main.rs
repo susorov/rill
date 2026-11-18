@@ -28,7 +28,7 @@ fn run() -> Result<(), String> {
 
         [option, ..] if option.starts_with('-') => Err(format!("unknown option '{option}'")),
 
-        [path] => parse_file(path),
+        [path] => compile_file(path),
 
         [] => Err("usage: rill <file.rill> | --version".into()),
 
@@ -36,7 +36,7 @@ fn run() -> Result<(), String> {
     }
 }
 
-fn parse_file(path: &str) -> Result<(), String> {
+fn compile_file(path: &str) -> Result<(), String> {
     if Path::new(path).extension().and_then(|ext| ext.to_str()) != Some("rill") {
         return Err(format!("expected a '.rill' source file: '{path}'"));
     }
@@ -44,17 +44,24 @@ fn parse_file(path: &str) -> Result<(), String> {
     let source =
         std::fs::read_to_string(path).map_err(|error| format!("cannot read '{path}': {error}"))?;
 
-    let program = rill_syntax::parser::parse(&source).map_err(|error| {
-        let offset = error.span.start.min(source.len());
+    let diagnostic = |message: &str, start: usize| {
+        let offset = start.min(source.len());
         let prefix = &source[..offset];
 
         let line = prefix.bytes().filter(|&byte| byte == b'\n').count() + 1;
         let column = prefix.rsplit('\n').next().unwrap_or("").chars().count() + 1;
 
-        format!("{path}:{line}:{column}: {}", error.message)
-    })?;
+        format!("{path}:{line}:{column}: {message}")
+    };
 
-    println!("{program:#?}");
+    let program = rill_syntax::parser::parse(&source)
+        .map_err(|error| diagnostic(&error.message, error.span.start))?;
+    let bytecode = rill_compiler::compile(&program)
+        .map_err(|error| diagnostic(&error.message, error.span.start))?;
+
+    for instruction in &bytecode.instructions {
+        println!("{instruction}");
+    }
 
     Ok(())
 }
