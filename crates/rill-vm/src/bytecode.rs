@@ -18,6 +18,8 @@ pub enum Instruction {
     LoadLocal(u32),
     /// Pop and print a value followed by a newline.
     Print,
+    /// Print an empty line.
+    PrintNewline,
 }
 
 impl fmt::Display for Instruction {
@@ -28,6 +30,7 @@ impl fmt::Display for Instruction {
             Self::StoreLocal(slot) => write!(f, "STORE_LOCAL {slot}"),
             Self::LoadLocal(slot) => write!(f, "LOAD_LOCAL {slot}"),
             Self::Print => write!(f, "PRINT"),
+            Self::PrintNewline => write!(f, "PRINT_NEWLINE"),
         }
     }
 }

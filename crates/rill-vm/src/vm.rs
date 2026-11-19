@@ -71,6 +71,9 @@ impl<'a> Vm<'a> {
                         Value::Boolean(value) => println!("{value}"),
                     }
                 }
+                Instruction::PrintNewline => {
+                    println!();
+                }
             }
 
             self.instruction_pointer += 1;

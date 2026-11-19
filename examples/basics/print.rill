@@ -5,6 +5,9 @@ let limit = count
 print(count)
 print(limit)
 
+// Print an empty line
+print()
+
 // Print boolean variables
 let enabled = true
 let active = enabled

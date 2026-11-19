@@ -80,8 +80,12 @@ impl<'a> Parser<'a> {
 
         self.expect(TokenKind::LeftParenthesis, "expected '('")?;
 
-        let token = self.expect(TokenKind::Identifier, "expected a variable name")?;
-        let name = self.source[token.span.start..token.span.end].to_owned();
+        let name = if self.current().kind == TokenKind::RightParenthesis {
+            None
+        } else {
+            let token = self.expect(TokenKind::Identifier, "expected a variable name")?;
+            Some(self.source[token.span.start..token.span.end].to_owned())
+        };
 
         let end = self
             .expect(TokenKind::RightParenthesis, "expected ')'")?
@@ -395,8 +399,21 @@ fn parses_print_statement() {
     assert_eq!(
         program.statements,
         vec![Statement::Print {
-            name: "count".to_owned(),
+            name: Some("count".to_owned()),
             span: Span::new(0, 12),
+        }]
+    );
+}
+
+#[test]
+fn parses_empty_print_statement() {
+    let program = parse("print()").unwrap();
+
+    assert_eq!(
+        program.statements,
+        vec![Statement::Print {
+            name: None,
+            span: Span::new(0, 7),
         }]
     );
 }
@@ -404,7 +421,6 @@ fn parses_print_statement() {
 #[test]
 fn rejects_invalid_print_statements() {
     for (source, message) in [
-        ("print()", "expected a variable name"),
         ("print(42)", "expected a variable name"),
         ("print(count", "expected ')'"),
         ("print count", "expected '('"),

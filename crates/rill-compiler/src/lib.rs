@@ -54,16 +54,20 @@ impl Compiler {
                 self.locals.insert(name.clone(), slot);
             }
             Statement::Print { name, span } => {
-                let slot = self.locals.get(name).ok_or_else(|| CompileError {
-                    message: format!("undefined variable '{name}'"),
-                    span: span.clone(),
-                })?;
+                if let Some(name) = name {
+                    let slot = self.locals.get(name).ok_or_else(|| CompileError {
+                        message: format!("undefined variable '{name}'"),
+                        span: span.clone(),
+                    })?;
 
-                self.bytecode
-                    .instructions
-                    .push(Instruction::LoadLocal(*slot));
+                    self.bytecode
+                        .instructions
+                        .push(Instruction::LoadLocal(*slot));
 
-                self.bytecode.instructions.push(Instruction::Print);
+                    self.bytecode.instructions.push(Instruction::Print);
+                } else {
+                    self.bytecode.instructions.push(Instruction::PrintNewline);
+                }
             }
         }
 

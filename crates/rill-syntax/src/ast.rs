@@ -13,7 +13,7 @@ pub enum Statement {
         span: Span,
     },
     Print {
-        name: String,
+        name: Option<String>,
         span: Span,
     },
 }
