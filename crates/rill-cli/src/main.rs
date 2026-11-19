@@ -1,6 +1,9 @@
 use std::path::Path;
 use std::process::ExitCode;
 
+use rill_vm::bytecode::Bytecode;
+use rill_vm::vm::Vm;
+
 const RILL_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() -> ExitCode {
@@ -13,30 +16,48 @@ fn main() -> ExitCode {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+enum Mode {
+    Run,
+    Bytecode,
+}
+
 fn run() -> Result<(), String> {
     let args: Vec<String> = std::env::args().skip(1).collect();
 
-    match args.as_slice() {
+    let (path, mode) = match args.as_slice() {
         [option] if option == "--version" => {
             println!("rill {RILL_VERSION}");
-            Ok(())
+            return Ok(());
         }
-
-        [option, ..] if option == "--version" => {
-            Err("'--version' does not accept arguments".into())
+        [option, path] if option == "--bytecode" => (path.as_str(), Mode::Bytecode),
+        [path] if !path.starts_with('-') => (path.as_str(), Mode::Run),
+        [option, ..] if option.starts_with('-') => {
+            return Err(format!("unknown or incomplete option '{option}'"));
         }
+        _ => {
+            return Err("usage: rill [--bytecode] <file.rill> | --version".into());
+        }
+    };
 
-        [option, ..] if option.starts_with('-') => Err(format!("unknown option '{option}'")),
+    let bytecode = compile_file(path)?;
 
-        [path] => compile_file(path),
-
-        [] => Err("usage: rill <file.rill> | --version".into()),
-
-        _ => Err("expected one source file; usage: rill <file.rill>".into()),
+    match mode {
+        Mode::Run => {
+            let mut vm = Vm::new(&bytecode);
+            vm.run().map_err(|error| error.to_string())?;
+        }
+        Mode::Bytecode => {
+            for instruction in &bytecode.instructions {
+                println!("{instruction}");
+            }
+        }
     }
+
+    Ok(())
 }
 
-fn compile_file(path: &str) -> Result<(), String> {
+fn compile_file(path: &str) -> Result<Bytecode, String> {
     if Path::new(path).extension().and_then(|ext| ext.to_str()) != Some("rill") {
         return Err(format!("expected a '.rill' source file: '{path}'"));
     }
@@ -56,12 +77,6 @@ fn compile_file(path: &str) -> Result<(), String> {
 
     let program = rill_syntax::parser::parse(&source)
         .map_err(|error| diagnostic(&error.message, error.span.start))?;
-    let bytecode = rill_compiler::compile(&program)
-        .map_err(|error| diagnostic(&error.message, error.span.start))?;
 
-    for instruction in &bytecode.instructions {
-        println!("{instruction}");
-    }
-
-    Ok(())
+    rill_compiler::compile(&program).map_err(|error| diagnostic(&error.message, error.span.start))
 }

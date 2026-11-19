@@ -11,3 +11,4 @@ license.workspace = true
 [dependencies]
 rill-compiler = { path = "../rill-compiler" }
 rill-syntax = { path = "../rill-syntax" }
+rill-vm = { path = "../rill-vm" }
