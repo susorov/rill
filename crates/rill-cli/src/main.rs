@@ -5,6 +5,17 @@ use rill_vm::bytecode::Bytecode;
 use rill_vm::vm::Vm;
 
 const RILL_VERSION: &str = env!("CARGO_PKG_VERSION");
+const HELP: &str = "\
+Usage:
+  rill <file.rill>
+  rill --bytecode <file.rill>
+  rill --version
+  rill --help
+
+Options:
+  --bytecode  Print bytecode without executing
+  --version   Print version information
+  --help      Print this help message";
 
 fn main() -> ExitCode {
     match run() {
@@ -26,6 +37,10 @@ fn run() -> Result<(), String> {
     let args: Vec<String> = std::env::args().skip(1).collect();
 
     let (path, mode) = match args.as_slice() {
+        [option] if option == "--help" => {
+            println!("{HELP}");
+            return Ok(());
+        }
         [option] if option == "--version" => {
             println!("rill {RILL_VERSION}");
             return Ok(());
@@ -36,7 +51,7 @@ fn run() -> Result<(), String> {
             return Err(format!("unknown or incomplete option '{option}'"));
         }
         _ => {
-            return Err("usage: rill [--bytecode] <file.rill> | --version".into());
+            return Err("usage: rill [--bytecode] <file.rill> | --version | --help".into());
         }
     };
 
