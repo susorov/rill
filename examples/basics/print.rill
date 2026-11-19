@@ -1,0 +1,13 @@
+// Print integer variables
+let count = 42
+let limit = count
+
+print(count)
+print(limit)
+
+// Print boolean variables
+let enabled = true
+let active = enabled
+
+print(enabled)
+print(active)

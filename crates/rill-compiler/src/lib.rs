@@ -53,6 +53,18 @@ impl Compiler {
                     .push(Instruction::StoreLocal(slot));
                 self.locals.insert(name.clone(), slot);
             }
+            Statement::Print { name, span } => {
+                let slot = self.locals.get(name).ok_or_else(|| CompileError {
+                    message: format!("undefined variable '{name}'"),
+                    span: span.clone(),
+                })?;
+
+                self.bytecode
+                    .instructions
+                    .push(Instruction::LoadLocal(*slot));
+
+                self.bytecode.instructions.push(Instruction::Print);
+            }
         }
 
         Ok(())
@@ -195,5 +207,36 @@ mod tests {
     fn compilation_does_not_share_bindings_between_programs() {
         compile(&parse("let x = 42").unwrap()).unwrap();
         assert!(compile(&parse("let y = x").unwrap()).is_err());
+    }
+
+    #[test]
+    fn compiles_print_statement() {
+        let program = parse("let count = 42\nprint(count)").unwrap();
+
+        assert_eq!(
+            compile(&program).unwrap(),
+            Bytecode {
+                instructions: vec![
+                    PushInteger(42),
+                    StoreLocal(0),
+                    LoadLocal(0),
+                    Instruction::Print,
+                ],
+                local_count: 1,
+            }
+        );
+    }
+
+    #[test]
+    fn rejects_printing_undefined_variable() {
+        let program = parse("print(missing)").unwrap();
+
+        assert_eq!(
+            compile(&program).unwrap_err(),
+            CompileError {
+                message: "undefined variable 'missing'".to_owned(),
+                span: Span::new(0, 14),
+            }
+        );
     }
 }

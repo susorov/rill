@@ -63,6 +63,14 @@ impl<'a> Vm<'a> {
                         .ok_or(VmError::UninitializedLocal(slot))?;
                     self.stack.push(value);
                 }
+                Instruction::Print => {
+                    let value = self.stack.pop().ok_or(VmError::StackUnderflow)?;
+
+                    match value {
+                        Value::Integer(value) => println!("{value}"),
+                        Value::Boolean(value) => println!("{value}"),
+                    }
+                }
             }
 
             self.instruction_pointer += 1;
@@ -187,5 +195,37 @@ mod tests {
         assert_eq!(vm.instruction_pointer, 2);
         assert!(vm.stack.is_empty());
         assert_eq!(vm.locals, vec![Some(Value::Integer(42))]);
+    }
+
+    #[test]
+    fn print_consumes_stack_value() {
+        let bytecode = Bytecode {
+            instructions: vec![
+                PushInteger(42),
+                Instruction::Print,
+                PushBoolean(true),
+                Instruction::Print,
+            ],
+            local_count: 0,
+        };
+
+        let mut vm = Vm::new(&bytecode);
+
+        assert_eq!(vm.run(), Ok(()));
+        assert!(vm.stack.is_empty());
+        assert_eq!(vm.instruction_pointer, 4);
+    }
+
+    #[test]
+    fn print_rejects_stack_underflow() {
+        let bytecode = Bytecode {
+            instructions: vec![Instruction::Print],
+            local_count: 0,
+        };
+
+        let mut vm = Vm::new(&bytecode);
+
+        assert_eq!(vm.run(), Err(VmError::StackUnderflow));
+        assert_eq!(vm.instruction_pointer, 0);
     }
 }

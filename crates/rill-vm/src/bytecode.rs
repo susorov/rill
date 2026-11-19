@@ -16,6 +16,8 @@ pub enum Instruction {
     StoreLocal(u32),
     /// Copy a local slot's value onto the operand stack.
     LoadLocal(u32),
+    /// Pop and print a value followed by a newline.
+    Print,
 }
 
 impl fmt::Display for Instruction {
@@ -25,6 +27,7 @@ impl fmt::Display for Instruction {
             Self::PushBoolean(value) => write!(f, "PUSH_BOOLEAN {value}"),
             Self::StoreLocal(slot) => write!(f, "STORE_LOCAL {slot}"),
             Self::LoadLocal(slot) => write!(f, "LOAD_LOCAL {slot}"),
+            Self::Print => write!(f, "PRINT"),
         }
     }
 }

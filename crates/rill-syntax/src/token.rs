@@ -6,6 +6,7 @@ pub enum TokenKind {
     Let,
     Int,
     Bool,
+    Print,
 
     // Values
     Identifier,
@@ -17,6 +18,8 @@ pub enum TokenKind {
 
     // Separators
     Newline,
+    LeftParenthesis,
+    RightParenthesis,
 
     // Special
     Eof,

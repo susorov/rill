@@ -53,14 +53,45 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_statement(&mut self) -> Result<Statement, ParseError> {
+        match self.current().kind {
+            TokenKind::Print => self.parse_print_statement(),
+            _ => self.parse_let_statement(),
+        }
+    }
+
+    fn parse_let_statement(&mut self) -> Result<Statement, ParseError> {
         let start = self.expect(TokenKind::Let, "expected 'let'")?.span.start;
         let name = self.expect(TokenKind::Identifier, "expected an identifier")?;
         let name = self.source[name.span.start..name.span.end].to_owned();
+
         self.expect(TokenKind::Equal, "expected '='")?;
+
         let value = self.parse_expression()?;
         let span = Span::new(start, value.span.end);
 
         Ok(Statement::Let { name, value, span })
+    }
+
+    fn parse_print_statement(&mut self) -> Result<Statement, ParseError> {
+        let start = self
+            .expect(TokenKind::Print, "expected 'print'")?
+            .span
+            .start;
+
+        self.expect(TokenKind::LeftParenthesis, "expected '('")?;
+
+        let token = self.expect(TokenKind::Identifier, "expected a variable name")?;
+        let name = self.source[token.span.start..token.span.end].to_owned();
+
+        let end = self
+            .expect(TokenKind::RightParenthesis, "expected ')'")?
+            .span
+            .end;
+
+        Ok(Statement::Print {
+            name,
+            span: Span::new(start, end),
+        })
     }
 
     fn parse_expression(&mut self) -> Result<Expression, ParseError> {
@@ -237,7 +268,10 @@ mod tests {
                 ExpressionKind::Identifier("count".to_owned()),
                 ExpressionKind::Identifier("limit".to_owned()),
             ]) {
-                let Statement::Let { value, .. } = statement;
+                let Statement::Let { value, .. } = statement else {
+                    panic!("expected let statement");
+                };
+
                 assert_eq!(value.kind, expected);
             }
         }
@@ -329,7 +363,10 @@ mod tests {
     #[test]
     fn accepts_largest_i64_literal() {
         let program = parse("let x = 9223372036854775807").unwrap();
-        let Statement::Let { value, .. } = &program.statements[0];
+
+        let Statement::Let { value, .. } = &program.statements[0] else {
+            panic!("expected let statement");
+        };
 
         assert_eq!(value.kind, ExpressionKind::Integer(i64::MAX));
     }
@@ -348,5 +385,30 @@ mod tests {
 
         assert_eq!(error.message, "unexpected character 'é'");
         assert_eq!(error.span, Span::new(8, 10));
+    }
+}
+
+#[test]
+fn parses_print_statement() {
+    let program = parse("print(count)").unwrap();
+
+    assert_eq!(
+        program.statements,
+        vec![Statement::Print {
+            name: "count".to_owned(),
+            span: Span::new(0, 12),
+        }]
+    );
+}
+
+#[test]
+fn rejects_invalid_print_statements() {
+    for (source, message) in [
+        ("print()", "expected a variable name"),
+        ("print(42)", "expected a variable name"),
+        ("print(count", "expected ')'"),
+        ("print count", "expected '('"),
+    ] {
+        assert_eq!(parse(source).unwrap_err().message, message);
     }
 }

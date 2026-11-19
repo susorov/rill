@@ -12,6 +12,10 @@ pub enum Statement {
         value: Expression,
         span: Span,
     },
+    Print {
+        name: String,
+        span: Span,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

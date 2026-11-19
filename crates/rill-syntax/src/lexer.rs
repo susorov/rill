@@ -36,6 +36,16 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
                 TokenKind::Newline
             }
 
+            b'(' => {
+                pos += 1;
+                TokenKind::LeftParenthesis
+            }
+
+            b')' => {
+                pos += 1;
+                TokenKind::RightParenthesis
+            }
+
             b'/' if bytes.get(pos + 1) == Some(&b'/') => {
                 pos += 2;
 
@@ -75,6 +85,7 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
                     "let" => TokenKind::Let,
                     "int" => TokenKind::Int,
                     "bool" => TokenKind::Bool,
+                    "print" => TokenKind::Print,
                     "true" | "false" => TokenKind::Boolean,
                     _ => TokenKind::Identifier,
                 }
@@ -296,4 +307,27 @@ mod tests {
 
         assert_eq!(tokens[0].kind, TokenKind::Identifier);
     }
+}
+
+#[test]
+fn tokenizes_print_statement() {
+    let tokens = tokenize("print(count)").unwrap();
+
+    let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
+
+    assert_eq!(
+        kinds,
+        vec![
+            TokenKind::Print,
+            TokenKind::LeftParenthesis,
+            TokenKind::Identifier,
+            TokenKind::RightParenthesis,
+            TokenKind::Eof,
+        ]
+    );
+
+    assert_eq!(tokens[0].span, Span::new(0, 5));
+    assert_eq!(tokens[1].span, Span::new(5, 6));
+    assert_eq!(tokens[2].span, Span::new(6, 11));
+    assert_eq!(tokens[3].span, Span::new(11, 12));
 }
