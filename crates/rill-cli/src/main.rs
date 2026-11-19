@@ -48,7 +48,7 @@ fn run() -> Result<(), String> {
         [option, path] if option == "--bytecode" => (path.as_str(), Mode::Bytecode),
         [path] if !path.starts_with('-') => (path.as_str(), Mode::Run),
         [option, ..] if option.starts_with('-') => {
-            return Err(format!("unknown or incomplete option '{option}'"));
+            return Err(format!("unknown option '{option}'. Try 'rill --help'"));
         }
         _ => {
             return Err("usage: rill [--bytecode] <file.rill> | --version | --help".into());
