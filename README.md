@@ -33,6 +33,10 @@ mv rill ~/.local/bin/rill
 
 Ensure `~/.local/bin` is included in your `PATH` to run `rill` from anywhere.
 
+## Editor highlighting
+
+Enable the TextMate Bundles plugin, then import the `editors/textmate` folder. `.rill` files use your editor's colors.
+
 ## Usage
 
 Compile and execute a Rill program:

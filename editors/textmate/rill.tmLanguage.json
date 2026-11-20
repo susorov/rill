@@ -1,0 +1,27 @@
+{
+  "name": "rill",
+  "scopeName": "source.rill",
+  "fileTypes": ["rill"],
+  "patterns": [
+    {
+      "name": "comment.line.double-slash.rill",
+      "match": "//[^\\r\\n]*"
+    },
+    {
+      "name": "keyword.declaration.rill",
+      "match": "\\blet\\b"
+    },
+    {
+      "name": "constant.language.boolean.rill",
+      "match": "\\b(?:true|false)\\b"
+    },
+    {
+      "name": "constant.numeric.integer.rill",
+      "match": "\\b[0-9]+\\b"
+    },
+    {
+      "name": "entity.name.function.rill",
+      "match": "\\bprint(?=\\s*\\()"
+    }
+  ]
+}

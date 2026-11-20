@@ -1,0 +1,10 @@
+{
+  "name": "rill-syntax",
+  "displayName": "rill",
+  "version": "0.1.0",
+  "engines": { "vscode": "*" },
+  "contributes": {
+    "languages": [{ "id": "rill", "aliases": ["rill"], "extensions": [".rill"] }],
+    "grammars": [{ "language": "rill", "scopeName": "source.rill", "path": "./rill.tmLanguage.json" }]
+  }
+}
