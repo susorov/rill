@@ -19,7 +19,7 @@ Download the appropriate binary from [GitHub Releases](https://github.com/susoro
 For example, on macOS Apple Silicon:
 
 ```bash
-tar -xzf rill-v0.1.0-alpha.4-macos-arm64.tar.gz
+tar -xzf rill-v0.1.0-alpha.5-macos-arm64.tar.gz
 chmod +x rill
 ./rill --version
 ```
