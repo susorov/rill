@@ -73,7 +73,7 @@ Single-line comments begin with `//`.
 
 ```bash
 // This is a comment
-let count = 42 // Inline comment
+let greeting = "Hello, Rill!" // Inline comment
 ```
 
 ### Output
@@ -97,6 +97,7 @@ Rill compiles source code into bytecode executed by its virtual machine.
 let count = 42
 print(count)
 print()
+print("Hello, Rill!")
 ```
 Running `rill --bytecode hello.rill` produces:
 ```bash
@@ -105,4 +106,6 @@ STORE_LOCAL 0
 LOAD_LOCAL 0
 PRINT
 PRINT_NEWLINE
+PUSH_STRING "Hello, Rill!"
+PRINT
 ```

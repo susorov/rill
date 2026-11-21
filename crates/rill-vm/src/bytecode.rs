@@ -6,12 +6,14 @@ pub struct Bytecode {
     pub local_count: u32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instruction {
     /// Push an integer onto the operand stack.
     PushInteger(i64),
     /// Push a boolean onto the operand stack.
     PushBoolean(bool),
+    /// Push a string onto the operand stack.
+    PushString(String),
     /// Pop a value from the operand stack into a local slot.
     StoreLocal(u32),
     /// Copy a local slot's value onto the operand stack.
@@ -27,6 +29,7 @@ impl fmt::Display for Instruction {
         match self {
             Self::PushInteger(value) => write!(f, "PUSH_INTEGER {value}"),
             Self::PushBoolean(value) => write!(f, "PUSH_BOOLEAN {value}"),
+            Self::PushString(value) => write!(f, "PUSH_STRING {value:?}"),
             Self::StoreLocal(slot) => write!(f, "STORE_LOCAL {slot}"),
             Self::LoadLocal(slot) => write!(f, "LOAD_LOCAL {slot}"),
             Self::Print => write!(f, "PRINT"),

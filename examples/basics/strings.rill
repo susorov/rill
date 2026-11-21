@@ -1,0 +1,11 @@
+// Strings preserve spaces and punctuation
+let greeting = "Hello, Rill!"
+print(greeting)
+
+// Empty strings are valid
+let empty = ""
+print(empty)
+
+// Comment markers inside quotes are part of the string
+let text = "// this is text" // This is a comment
+print(text)

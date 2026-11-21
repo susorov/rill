@@ -80,11 +80,10 @@ impl<'a> Parser<'a> {
 
         self.expect(TokenKind::LeftParenthesis, "expected '('")?;
 
-        let name = if self.current().kind == TokenKind::RightParenthesis {
+        let value = if self.current().kind == TokenKind::RightParenthesis {
             None
         } else {
-            let token = self.expect(TokenKind::Identifier, "expected a variable name")?;
-            Some(self.source[token.span.start..token.span.end].to_owned())
+            Some(self.parse_expression()?)
         };
 
         let end = self
@@ -93,7 +92,7 @@ impl<'a> Parser<'a> {
             .end;
 
         Ok(Statement::Print {
-            name,
+            value,
             span: Span::new(start, end),
         })
     }
@@ -122,6 +121,12 @@ impl<'a> Parser<'a> {
                     })?;
 
                 ExpressionKind::Boolean(value)
+            }
+
+            TokenKind::String => {
+                let value = self.source[token.span.start + 1..token.span.end - 1].to_owned();
+
+                ExpressionKind::String(value)
             }
 
             TokenKind::Identifier => {
@@ -164,6 +169,43 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parses_string_declarations_with_source_spans() {
+        for text in ["", "hello world", "// not a comment", "true (42)"] {
+            let prefix = "let text = ";
+            let source = format!("{prefix}\"{text}\"");
+
+            assert_eq!(
+                parse(&source).unwrap(),
+                Program {
+                    statements: vec![Statement::Let {
+                        name: "text".to_owned(),
+                        value: Expression {
+                            kind: ExpressionKind::String(text.to_owned()),
+                            span: Span::new(prefix.len(), source.len()),
+                        },
+                        span: Span::new(0, source.len()),
+                    }],
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn preserves_unterminated_string_errors() {
+        for suffix in ["", "\n", "\r\n", "\r"] {
+            let source = format!("let text = \"hello{suffix}");
+
+            assert_eq!(
+                parse(&source).unwrap_err(),
+                ParseError {
+                    message: "unterminated string".to_owned(),
+                    span: Span::new(11, source.len() - suffix.len()),
+                }
+            );
+        }
+    }
 
     #[test]
     fn parses_boolean_declarations_with_source_spans() {
@@ -385,24 +427,39 @@ mod tests {
 
     #[test]
     fn preserves_lexical_errors() {
-        let error = parse("let x = é").unwrap_err();
+        let error = parse("let x = @").unwrap_err();
 
-        assert_eq!(error.message, "unexpected character 'é'");
-        assert_eq!(error.span, Span::new(8, 10));
+        assert_eq!(error.message, "unexpected character '@'");
+        assert_eq!(error.span, Span::new(8, 9));
     }
 }
 
 #[test]
 fn parses_print_statement() {
-    let program = parse("print(count)").unwrap();
+    for (argument, kind) in [
+        ("count", ExpressionKind::Identifier("count".to_owned())),
+        ("42", ExpressionKind::Integer(42)),
+        ("true", ExpressionKind::Boolean(true)),
+        ("false", ExpressionKind::Boolean(false)),
+        (
+            "\"hello world\"",
+            ExpressionKind::String("hello world".to_owned()),
+        ),
+        ("\"\"", ExpressionKind::String(String::new())),
+    ] {
+        let source = format!("print({argument})");
 
-    assert_eq!(
-        program.statements,
-        vec![Statement::Print {
-            name: Some("count".to_owned()),
-            span: Span::new(0, 12),
-        }]
-    );
+        assert_eq!(
+            parse(&source).unwrap().statements,
+            vec![Statement::Print {
+                value: Some(Expression {
+                    kind,
+                    span: Span::new(6, 6 + argument.len()),
+                }),
+                span: Span::new(0, source.len()),
+            }]
+        );
+    }
 }
 
 #[test]
@@ -412,7 +469,7 @@ fn parses_empty_print_statement() {
     assert_eq!(
         program.statements,
         vec![Statement::Print {
-            name: None,
+            value: None,
             span: Span::new(0, 7),
         }]
     );
@@ -420,11 +477,22 @@ fn parses_empty_print_statement() {
 
 #[test]
 fn rejects_invalid_print_statements() {
-    for (source, message) in [
-        ("print(42)", "expected a variable name"),
-        ("print(count", "expected ')'"),
-        ("print count", "expected '('"),
+    for (source, message, start, end) in [
+        ("print(count", "expected ')'", 11, 11),
+        ("print count", "expected '('", 6, 11),
+        ("print(", "expected an expression", 6, 6),
+        ("print(let)", "expected an expression", 6, 9),
+        ("print(\n)", "expected an expression", 6, 7),
+        ("print(42 43)", "expected ')'", 9, 11),
+        ("print(\"hello\"", "expected ')'", 13, 13),
     ] {
-        assert_eq!(parse(source).unwrap_err().message, message);
+        assert_eq!(
+            parse(source).unwrap_err(),
+            ParseError {
+                message: message.to_owned(),
+                span: Span::new(start, end),
+            },
+            "source: {source:?}"
+        );
     }
 }

@@ -43,24 +43,27 @@ impl<'a> Vm<'a> {
     }
 
     pub fn run(&mut self) -> Result<(), VmError> {
-        while let Some(&instruction) = self.bytecode.instructions.get(self.instruction_pointer) {
+        while let Some(instruction) = self.bytecode.instructions.get(self.instruction_pointer) {
             match instruction {
                 Instruction::PushInteger(value) => {
-                    self.stack.push(Value::Integer(value));
+                    self.stack.push(Value::Integer(*value));
                 }
                 Instruction::PushBoolean(value) => {
-                    self.stack.push(Value::Boolean(value));
+                    self.stack.push(Value::Boolean(*value));
+                }
+                Instruction::PushString(value) => {
+                    self.stack.push(Value::String(value.clone()));
                 }
                 Instruction::StoreLocal(slot) => {
-                    let index = self.local_index(slot)?;
+                    let index = self.local_index(*slot)?;
                     let value = self.stack.pop().ok_or(VmError::StackUnderflow)?;
                     self.locals[index] = Some(value);
                 }
                 Instruction::LoadLocal(slot) => {
-                    let index = self.local_index(slot)?;
+                    let index = self.local_index(*slot)?;
                     let value = self.locals[index]
                         .clone()
-                        .ok_or(VmError::UninitializedLocal(slot))?;
+                        .ok_or(VmError::UninitializedLocal(*slot))?;
                     self.stack.push(value);
                 }
                 Instruction::Print => {
@@ -69,6 +72,7 @@ impl<'a> Vm<'a> {
                     match value {
                         Value::Integer(value) => println!("{value}"),
                         Value::Boolean(value) => println!("{value}"),
+                        Value::String(value) => println!("{value}"),
                     }
                 }
                 Instruction::PrintNewline => {
@@ -96,7 +100,42 @@ impl<'a> Vm<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use Instruction::{LoadLocal, PushBoolean, PushInteger, StoreLocal};
+    use Instruction::{LoadLocal, PushBoolean, PushInteger, PushString, StoreLocal};
+
+    #[test]
+    fn stores_and_copies_string_values() {
+        let bytecode = Bytecode {
+            instructions: vec![
+                PushString("hello".to_owned()),
+                StoreLocal(0),
+                LoadLocal(0),
+                StoreLocal(1),
+                PushString("changed".to_owned()),
+                StoreLocal(0),
+                LoadLocal(1),
+                LoadLocal(0),
+            ],
+            local_count: 2,
+        };
+        let mut vm = Vm::new(&bytecode);
+
+        vm.run().unwrap();
+
+        assert_eq!(
+            vm.locals,
+            vec![
+                Some(Value::String("changed".to_owned())),
+                Some(Value::String("hello".to_owned())),
+            ]
+        );
+        assert_eq!(
+            vm.stack,
+            vec![
+                Value::String("hello".to_owned()),
+                Value::String("changed".to_owned()),
+            ]
+        );
+    }
 
     #[test]
     fn executes_instructions_and_does_not_restart_after_completion() {
@@ -208,6 +247,11 @@ mod tests {
                 Instruction::Print,
                 PushBoolean(true),
                 Instruction::Print,
+                PushString("hello".to_owned()),
+                Instruction::Print,
+                PushString(String::new()),
+                Instruction::Print,
+                Instruction::PrintNewline,
             ],
             local_count: 0,
         };
@@ -216,7 +260,7 @@ mod tests {
 
         assert_eq!(vm.run(), Ok(()));
         assert!(vm.stack.is_empty());
-        assert_eq!(vm.instruction_pointer, 4);
+        assert_eq!(vm.instruction_pointer, bytecode.instructions.len());
     }
 
     #[test]

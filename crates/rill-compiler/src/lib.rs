@@ -53,17 +53,9 @@ impl Compiler {
                     .push(Instruction::StoreLocal(slot));
                 self.locals.insert(name.clone(), slot);
             }
-            Statement::Print { name, span } => {
-                if let Some(name) = name {
-                    let slot = self.locals.get(name).ok_or_else(|| CompileError {
-                        message: format!("undefined variable '{name}'"),
-                        span: span.clone(),
-                    })?;
-
-                    self.bytecode
-                        .instructions
-                        .push(Instruction::LoadLocal(*slot));
-
+            Statement::Print { value, .. } => {
+                if let Some(value) = value {
+                    self.compile_expression(value)?;
                     self.bytecode.instructions.push(Instruction::Print);
                 } else {
                     self.bytecode.instructions.push(Instruction::PrintNewline);
@@ -78,6 +70,7 @@ impl Compiler {
         let instruction = match &expression.kind {
             ExpressionKind::Integer(value) => Instruction::PushInteger(*value),
             ExpressionKind::Boolean(value) => Instruction::PushBoolean(*value),
+            ExpressionKind::String(value) => Instruction::PushString(value.clone()),
             ExpressionKind::Identifier(name) => {
                 let slot = self.locals.get(name).ok_or_else(|| CompileError {
                     message: format!("undefined variable '{name}'"),
@@ -95,8 +88,58 @@ impl Compiler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use Instruction::{LoadLocal, PushBoolean, PushInteger, StoreLocal};
+    use Instruction::{LoadLocal, PushBoolean, PushInteger, PushString, StoreLocal};
     use rill_syntax::parser::parse;
+
+    #[test]
+    fn compiles_string_literals_and_references() {
+        for text in ["", "hello world", "// not a comment"] {
+            let source =
+                format!("let text = \"{text}\"\nlet copy = text\nprint(copy)\nprint(text)");
+
+            assert_eq!(
+                compile(&parse(&source).unwrap()).unwrap(),
+                Bytecode {
+                    instructions: vec![
+                        PushString(text.to_owned()),
+                        StoreLocal(0),
+                        LoadLocal(0),
+                        StoreLocal(1),
+                        LoadLocal(1),
+                        Instruction::Print,
+                        LoadLocal(0),
+                        Instruction::Print,
+                    ],
+                    local_count: 2,
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn compiles_literal_and_empty_print_statements() {
+        let source = "print(42)\nprint(true)\nprint(false)\nprint(\"hello\")\nprint(\"\")\nprint()";
+
+        assert_eq!(
+            compile(&parse(source).unwrap()).unwrap(),
+            Bytecode {
+                instructions: vec![
+                    PushInteger(42),
+                    Instruction::Print,
+                    PushBoolean(true),
+                    Instruction::Print,
+                    PushBoolean(false),
+                    Instruction::Print,
+                    PushString("hello".to_owned()),
+                    Instruction::Print,
+                    PushString(String::new()),
+                    Instruction::Print,
+                    Instruction::PrintNewline,
+                ],
+                local_count: 0,
+            }
+        );
+    }
 
     #[test]
     fn compiles_boolean_literals_and_references() {
@@ -239,7 +282,7 @@ mod tests {
             compile(&program).unwrap_err(),
             CompileError {
                 message: "undefined variable 'missing'".to_owned(),
-                span: Span::new(0, 14),
+                span: Span::new(6, 13),
             }
         );
     }

@@ -13,7 +13,7 @@ pub enum Statement {
         span: Span,
     },
     Print {
-        name: Option<String>,
+        value: Option<Expression>,
         span: Span,
     },
 }
@@ -28,5 +28,6 @@ pub struct Expression {
 pub enum ExpressionKind {
     Integer(i64),
     Boolean(bool),
+    String(String),
     Identifier(String),
 }

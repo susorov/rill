@@ -1,0 +1,9 @@
+// String values can be referenced by later variables
+let message = "Hello, Rill!"
+let copy = message
+let latest = copy
+
+// Each variable remains available for printing
+print(message)
+print(copy)
+print(latest)

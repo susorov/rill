@@ -14,3 +14,16 @@ let active = enabled
 
 print(enabled)
 print(active)
+
+// Print a string variable
+let message = "Hello, Rill!"
+print(message)
+
+// Print literals directly
+print(42)
+print(true)
+print(false)
+print("No variable needed")
+
+// An empty string also prints an empty line
+print("")

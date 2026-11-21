@@ -12,6 +12,7 @@ pub enum TokenKind {
     Identifier,
     Integer,
     Boolean,
+    String,
 
     // Operators
     Equal,

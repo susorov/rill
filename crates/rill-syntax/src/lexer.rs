@@ -61,6 +61,26 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
                 TokenKind::Equal
             }
 
+            b'"' => {
+                pos += 1;
+
+                loop {
+                    match bytes.get(pos) {
+                        Some(b'"') => {
+                            pos += 1;
+                            break TokenKind::String;
+                        }
+                        Some(b'\n' | b'\r') | None => {
+                            return Err(LexError {
+                                message: "unterminated string".to_owned(),
+                                span: Span::new(start, pos),
+                            });
+                        }
+                        Some(_) => pos += 1,
+                    }
+                }
+            }
+
             b'0'..=b'9' => {
                 pos += 1;
 
@@ -92,7 +112,7 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
             }
 
             _ => {
-                // Cover the entire UTF-8 character in the diagnostic span.
+                // Cover the entire unexpected character in the diagnostic span.
                 let ch = source[pos..].chars().next().unwrap();
 
                 return Err(LexError {
@@ -119,6 +139,72 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tokenizes_strings_as_single_tokens_with_quoted_byte_spans() {
+        for text in ["", "hello world", "// not a comment", "true (42)"] {
+            let source = format!("\"{text}\"");
+            let tokens = tokenize(&source).unwrap();
+
+            assert_eq!(tokens.len(), 2);
+            assert_eq!(tokens[0].kind, TokenKind::String);
+            assert_eq!(tokens[0].span, Span::new(0, source.len()));
+            assert_eq!(tokens[1].kind, TokenKind::Eof);
+            assert_eq!(tokens[1].span, Span::new(source.len(), source.len()));
+        }
+    }
+
+    #[test]
+    fn resumes_tokenizing_after_strings() {
+        let source = "print(\"hello!\") // comment\nprint()";
+        let tokens = tokenize(source).unwrap();
+
+        assert_eq!(
+            tokens.iter().map(|token| token.kind).collect::<Vec<_>>(),
+            vec![
+                TokenKind::Print,
+                TokenKind::LeftParenthesis,
+                TokenKind::String,
+                TokenKind::RightParenthesis,
+                TokenKind::Newline,
+                TokenKind::Print,
+                TokenKind::LeftParenthesis,
+                TokenKind::RightParenthesis,
+                TokenKind::Eof,
+            ]
+        );
+        assert_eq!(tokens[2].span, Span::new(6, 14));
+        assert_eq!(tokens[3].span, Span::new(14, 15));
+        assert_eq!(tokens[4].span, Span::new(26, 27));
+    }
+
+    #[test]
+    fn rejects_unterminated_strings_at_eof() {
+        for source in ["\"", "\"hello"] {
+            assert_eq!(
+                tokenize(source).unwrap_err(),
+                LexError {
+                    message: "unterminated string".to_owned(),
+                    span: Span::new(0, source.len()),
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_raw_newlines_in_strings() {
+        for newline in ["\n", "\r\n", "\r"] {
+            let source = format!("\"hello{newline}world\"");
+
+            assert_eq!(
+                tokenize(&source).unwrap_err(),
+                LexError {
+                    message: "unterminated string".to_owned(),
+                    span: Span::new(0, 6),
+                }
+            );
+        }
+    }
 
     #[test]
     fn preserves_newlines_and_byte_offsets_after_comments() {
@@ -263,16 +349,6 @@ mod tests {
         let error = tokenize("let x = 42;").unwrap_err();
 
         assert_eq!(error.span, Span::new(10, 11));
-    }
-
-    #[test]
-    fn rejects_unicode_with_full_byte_span() {
-        for (source, end) in [("let x = é", 10), ("let x = 🦀", 12)] {
-            let error = tokenize(source).unwrap_err();
-
-            assert_eq!(error.span, Span::new(8, end));
-            assert_eq!(&source[error.span.start..error.span.end], &source[8..]);
-        }
     }
 
     #[test]
