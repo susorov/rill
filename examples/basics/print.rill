@@ -20,7 +20,7 @@ let message = "Hello, Rill!"
 print(message)
 
 // Print literals directly
-print(42)
+print(-42)
 print(true)
 print(false)
 print("No variable needed")

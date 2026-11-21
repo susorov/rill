@@ -81,7 +81,9 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
                 }
             }
 
-            b'0'..=b'9' => {
+            b'0'..=b'9' | b'-'
+                if bytes[pos] != b'-' || bytes.get(pos + 1).is_some_and(u8::is_ascii_digit) =>
+            {
                 pos += 1;
 
                 while pos < bytes.len() && bytes[pos].is_ascii_digit() {
@@ -139,6 +141,56 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tokenizes_mixed_positive_and_negative_integers_with_spans() {
+        let tokens = tokenize("0 -0 7 -7 42 -42").unwrap();
+
+        assert_eq!(
+            tokens
+                .iter()
+                .map(|token| (token.kind, token.span.clone()))
+                .collect::<Vec<_>>(),
+            vec![
+                (TokenKind::Integer, Span::new(0, 1)),
+                (TokenKind::Integer, Span::new(2, 4)),
+                (TokenKind::Integer, Span::new(5, 6)),
+                (TokenKind::Integer, Span::new(7, 9)),
+                (TokenKind::Integer, Span::new(10, 12)),
+                (TokenKind::Integer, Span::new(13, 16)),
+                (TokenKind::Eof, Span::new(16, 16)),
+            ]
+        );
+    }
+
+    #[test]
+    fn tokenizes_negative_integer_literals() {
+        for literal in ["-42", "-0", "-9223372036854775808"] {
+            let source = format!("let x = {literal}");
+            let tokens = tokenize(&source).unwrap();
+
+            assert_eq!(tokens.len(), 5);
+            assert_eq!(tokens[3].kind, TokenKind::Integer);
+            assert_eq!(tokens[3].span, Span::new(8, source.len()));
+            assert_eq!(tokens[4].kind, TokenKind::Eof);
+            assert_eq!(tokens[4].span, Span::new(source.len(), source.len()));
+        }
+    }
+
+    #[test]
+    fn rejects_minus_without_an_immediate_digit() {
+        for value in ["-", "-name", "- 42", "-\n42", "--42"] {
+            let source = format!("let x = {value}");
+
+            assert_eq!(
+                tokenize(&source).unwrap_err(),
+                LexError {
+                    message: "unexpected character '-'".to_owned(),
+                    span: Span::new(8, 9),
+                }
+            );
+        }
+    }
 
     #[test]
     fn tokenizes_strings_as_single_tokens_with_quoted_byte_spans() {
