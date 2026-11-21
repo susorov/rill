@@ -17,7 +17,22 @@
     },
     {
       "name": "constant.numeric.integer.rill",
-      "match": "\\b[0-9]+\\b"
+      "match": "(?<![\\w.])-?[0-9]+\\b"
+    },
+    {
+      "name": "constant.numeric.float.rill",
+      "match": "(?<![\\w.])-?[0-9]+\\.[0-9]+\\b"
+    },
+    {
+      "name": "string.quoted.double.rill",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.rill",
+          "match": "\\\\."
+        }
+      ]
     },
     {
       "name": "entity.name.function.rill",
