@@ -3,20 +3,21 @@ use crate::span::Span;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenKind {
     // Keywords
-    Let,
-    Int,
-    Bool,
-    Print,
+    LetKeyword,
+    IntKeyword,
+    BoolKeyword,
+    FloatKeyword,
+    PrintKeyword,
 
     // Values
     Identifier,
-    Integer,
-    Float,
-    Boolean,
-    String,
+    IntegerLiteral,
+    FloatLiteral,
+    BooleanLiteral,
+    StringLiteral,
 
     // Operators
-    Equal,
+    Assign,
 
     // Separators
     Newline,

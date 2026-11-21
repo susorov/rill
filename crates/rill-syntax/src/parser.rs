@@ -54,17 +54,20 @@ impl<'a> Parser<'a> {
 
     fn parse_statement(&mut self) -> Result<Statement, ParseError> {
         match self.current().kind {
-            TokenKind::Print => self.parse_print_statement(),
+            TokenKind::PrintKeyword => self.parse_print_statement(),
             _ => self.parse_let_statement(),
         }
     }
 
     fn parse_let_statement(&mut self) -> Result<Statement, ParseError> {
-        let start = self.expect(TokenKind::Let, "expected 'let'")?.span.start;
+        let start = self
+            .expect(TokenKind::LetKeyword, "expected 'let'")?
+            .span
+            .start;
         let name = self.expect(TokenKind::Identifier, "expected an identifier")?;
         let name = self.source[name.span.start..name.span.end].to_owned();
 
-        self.expect(TokenKind::Equal, "expected '='")?;
+        self.expect(TokenKind::Assign, "expected '='")?;
 
         let value = self.parse_expression()?;
         let span = Span::new(start, value.span.end);
@@ -74,7 +77,7 @@ impl<'a> Parser<'a> {
 
     fn parse_print_statement(&mut self) -> Result<Statement, ParseError> {
         let start = self
-            .expect(TokenKind::Print, "expected 'print'")?
+            .expect(TokenKind::PrintKeyword, "expected 'print'")?
             .span
             .start;
 
@@ -101,7 +104,7 @@ impl<'a> Parser<'a> {
         let token = self.current();
 
         let kind = match token.kind {
-            TokenKind::Integer => {
+            TokenKind::IntegerLiteral => {
                 let value = self.source[token.span.start..token.span.end]
                     .parse::<i64>()
                     .map_err(|_| ParseError {
@@ -112,7 +115,7 @@ impl<'a> Parser<'a> {
                 ExpressionKind::Integer(value)
             }
 
-            TokenKind::Float => {
+            TokenKind::FloatLiteral => {
                 let value = self.source[token.span.start..token.span.end]
                     .parse::<f64>()
                     .map_err(|_| ParseError {
@@ -130,7 +133,7 @@ impl<'a> Parser<'a> {
                 ExpressionKind::Float(value)
             }
 
-            TokenKind::Boolean => {
+            TokenKind::BooleanLiteral => {
                 let value = self.source[token.span.start..token.span.end]
                     .parse::<bool>()
                     .map_err(|_| ParseError {
@@ -141,7 +144,7 @@ impl<'a> Parser<'a> {
                 ExpressionKind::Boolean(value)
             }
 
-            TokenKind::String => {
+            TokenKind::StringLiteral => {
                 let value = self.source[token.span.start + 1..token.span.end - 1].to_owned();
 
                 ExpressionKind::String(value)
@@ -308,7 +311,7 @@ mod tests {
 
     #[test]
     fn rejects_reserved_words_as_variable_names() {
-        for keyword in ["let", "true", "false", "int", "bool"] {
+        for keyword in ["let", "true", "false", "int", "bool", "float"] {
             let source = format!("let {keyword} = 42");
 
             assert_eq!(
@@ -323,7 +326,7 @@ mod tests {
 
     #[test]
     fn rejects_type_keywords_as_expressions() {
-        for keyword in ["int", "bool"] {
+        for keyword in ["int", "bool", "float"] {
             let source = format!("let value = {keyword}");
 
             assert_eq!(

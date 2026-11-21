@@ -58,7 +58,7 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
 
             b'=' => {
                 pos += 1;
-                TokenKind::Equal
+                TokenKind::Assign
             }
 
             b'"' => {
@@ -68,7 +68,7 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
                     match bytes.get(pos) {
                         Some(b'"') => {
                             pos += 1;
-                            break TokenKind::String;
+                            break TokenKind::StringLiteral;
                         }
                         Some(b'\n' | b'\r') | None => {
                             return Err(LexError {
@@ -104,9 +104,9 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
                         pos += 1;
                     }
 
-                    TokenKind::Float
+                    TokenKind::FloatLiteral
                 } else {
-                    TokenKind::Integer
+                    TokenKind::IntegerLiteral
                 }
             }
 
@@ -121,11 +121,12 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
                 }
 
                 match &source[start..pos] {
-                    "let" => TokenKind::Let,
-                    "int" => TokenKind::Int,
-                    "bool" => TokenKind::Bool,
-                    "print" => TokenKind::Print,
-                    "true" | "false" => TokenKind::Boolean,
+                    "let" => TokenKind::LetKeyword,
+                    "int" => TokenKind::IntKeyword,
+                    "bool" => TokenKind::BoolKeyword,
+                    "float" => TokenKind::FloatKeyword,
+                    "print" => TokenKind::PrintKeyword,
+                    "true" | "false" => TokenKind::BooleanLiteral,
                     _ => TokenKind::Identifier,
                 }
             }
@@ -166,7 +167,7 @@ mod tests {
                 let source = format!("{literal}{suffix}");
                 let tokens = tokenize(&source).unwrap();
 
-                assert_eq!(tokens[0].kind, TokenKind::Float);
+                assert_eq!(tokens[0].kind, TokenKind::FloatLiteral);
                 assert_eq!(tokens[0].span, Span::new(0, literal.len()));
                 if suffix.is_empty() {
                     assert_eq!(tokens.len(), 2);
@@ -207,12 +208,12 @@ mod tests {
                 .map(|token| (token.kind, token.span.clone()))
                 .collect::<Vec<_>>(),
             vec![
-                (TokenKind::Integer, Span::new(0, 1)),
-                (TokenKind::Integer, Span::new(2, 4)),
-                (TokenKind::Integer, Span::new(5, 6)),
-                (TokenKind::Integer, Span::new(7, 9)),
-                (TokenKind::Integer, Span::new(10, 12)),
-                (TokenKind::Integer, Span::new(13, 16)),
+                (TokenKind::IntegerLiteral, Span::new(0, 1)),
+                (TokenKind::IntegerLiteral, Span::new(2, 4)),
+                (TokenKind::IntegerLiteral, Span::new(5, 6)),
+                (TokenKind::IntegerLiteral, Span::new(7, 9)),
+                (TokenKind::IntegerLiteral, Span::new(10, 12)),
+                (TokenKind::IntegerLiteral, Span::new(13, 16)),
                 (TokenKind::Eof, Span::new(16, 16)),
             ]
         );
@@ -225,7 +226,7 @@ mod tests {
             let tokens = tokenize(&source).unwrap();
 
             assert_eq!(tokens.len(), 5);
-            assert_eq!(tokens[3].kind, TokenKind::Integer);
+            assert_eq!(tokens[3].kind, TokenKind::IntegerLiteral);
             assert_eq!(tokens[3].span, Span::new(8, source.len()));
             assert_eq!(tokens[4].kind, TokenKind::Eof);
             assert_eq!(tokens[4].span, Span::new(source.len(), source.len()));
@@ -254,7 +255,7 @@ mod tests {
             let tokens = tokenize(&source).unwrap();
 
             assert_eq!(tokens.len(), 2);
-            assert_eq!(tokens[0].kind, TokenKind::String);
+            assert_eq!(tokens[0].kind, TokenKind::StringLiteral);
             assert_eq!(tokens[0].span, Span::new(0, source.len()));
             assert_eq!(tokens[1].kind, TokenKind::Eof);
             assert_eq!(tokens[1].span, Span::new(source.len(), source.len()));
@@ -269,12 +270,12 @@ mod tests {
         assert_eq!(
             tokens.iter().map(|token| token.kind).collect::<Vec<_>>(),
             vec![
-                TokenKind::Print,
+                TokenKind::PrintKeyword,
                 TokenKind::LeftParenthesis,
-                TokenKind::String,
+                TokenKind::StringLiteral,
                 TokenKind::RightParenthesis,
                 TokenKind::Newline,
-                TokenKind::Print,
+                TokenKind::PrintKeyword,
                 TokenKind::LeftParenthesis,
                 TokenKind::RightParenthesis,
                 TokenKind::Eof,
@@ -325,10 +326,10 @@ mod tests {
                 tokens.iter().map(|t| t.kind).collect::<Vec<_>>(),
                 vec![
                     TokenKind::Newline,
-                    TokenKind::Let,
+                    TokenKind::LetKeyword,
                     TokenKind::Identifier,
-                    TokenKind::Equal,
-                    TokenKind::Integer,
+                    TokenKind::Assign,
+                    TokenKind::IntegerLiteral,
                     TokenKind::Eof,
                 ]
             );
@@ -358,9 +359,9 @@ mod tests {
         let tokens = tokenize("true false").unwrap();
 
         assert_eq!(tokens.len(), 3);
-        assert_eq!(tokens[0].kind, TokenKind::Boolean);
+        assert_eq!(tokens[0].kind, TokenKind::BooleanLiteral);
         assert_eq!(tokens[0].span, Span::new(0, 4));
-        assert_eq!(tokens[1].kind, TokenKind::Boolean);
+        assert_eq!(tokens[1].kind, TokenKind::BooleanLiteral);
         assert_eq!(tokens[1].span, Span::new(5, 10));
         assert_eq!(tokens[2].kind, TokenKind::Eof);
     }
@@ -378,6 +379,9 @@ mod tests {
             "bool_value",
             "boolean",
             "bool2",
+            "float_value",
+            "floating",
+            "float2",
         ] {
             let tokens = tokenize(source).unwrap();
 
@@ -390,14 +394,16 @@ mod tests {
 
     #[test]
     fn recognizes_reserved_type_names() {
-        let tokens = tokenize("int bool").unwrap();
+        let tokens = tokenize("int bool float").unwrap();
 
-        assert_eq!(tokens.len(), 3);
-        assert_eq!(tokens[0].kind, TokenKind::Int);
+        assert_eq!(tokens.len(), 4);
+        assert_eq!(tokens[0].kind, TokenKind::IntKeyword);
         assert_eq!(tokens[0].span, Span::new(0, 3));
-        assert_eq!(tokens[1].kind, TokenKind::Bool);
+        assert_eq!(tokens[1].kind, TokenKind::BoolKeyword);
         assert_eq!(tokens[1].span, Span::new(4, 8));
-        assert_eq!(tokens[2].kind, TokenKind::Eof);
+        assert_eq!(tokens[2].kind, TokenKind::FloatKeyword);
+        assert_eq!(tokens[2].span, Span::new(9, 14));
+        assert_eq!(tokens[3].kind, TokenKind::Eof);
     }
 
     #[test]
@@ -409,10 +415,10 @@ mod tests {
         assert_eq!(
             kinds,
             vec![
-                TokenKind::Let,
+                TokenKind::LetKeyword,
                 TokenKind::Identifier,
-                TokenKind::Equal,
-                TokenKind::Integer,
+                TokenKind::Assign,
+                TokenKind::IntegerLiteral,
                 TokenKind::Newline,
                 TokenKind::Eof,
             ]
@@ -430,7 +436,7 @@ mod tests {
         let tokens = tokenize(source).unwrap();
 
         assert_eq!(tokens[4].kind, TokenKind::Newline);
-        assert_eq!(tokens[5].kind, TokenKind::Let);
+        assert_eq!(tokens[5].kind, TokenKind::LetKeyword);
         assert_eq!(tokens.last().unwrap().kind, TokenKind::Eof);
     }
 
@@ -463,7 +469,7 @@ mod tests {
         let tokens = tokenize("let x = 42 \t ").unwrap();
 
         assert_eq!(tokens.len(), 5);
-        assert_eq!(tokens[3].kind, TokenKind::Integer);
+        assert_eq!(tokens[3].kind, TokenKind::IntegerLiteral);
         assert_eq!(tokens[3].span, Span::new(8, 10));
         assert_eq!(tokens[4].kind, TokenKind::Eof);
         assert_eq!(tokens[4].span, Span::new(13, 13));
@@ -476,7 +482,7 @@ mod tests {
         assert_eq!(tokens.len(), 11);
         assert_eq!(tokens[4].kind, TokenKind::Newline);
         assert_eq!(tokens[4].span, Span::new(10, 11));
-        assert_eq!(tokens[5].kind, TokenKind::Let);
+        assert_eq!(tokens[5].kind, TokenKind::LetKeyword);
         assert_eq!(tokens[5].span, Span::new(11, 14));
         assert_eq!(tokens[9].kind, TokenKind::Newline);
         assert_eq!(tokens[9].span, Span::new(21, 22));
@@ -501,7 +507,7 @@ fn tokenizes_print_statement() {
     assert_eq!(
         kinds,
         vec![
-            TokenKind::Print,
+            TokenKind::PrintKeyword,
             TokenKind::LeftParenthesis,
             TokenKind::Identifier,
             TokenKind::RightParenthesis,
