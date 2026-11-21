@@ -1,17 +1,19 @@
 use std::fmt;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Bytecode {
     pub instructions: Vec<Instruction>,
     pub local_count: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Instruction {
     /// Push an integer onto the operand stack.
     PushInteger(i64),
     /// Push a boolean onto the operand stack.
     PushBoolean(bool),
+    /// Push a float onto the operand stack.
+    PushFloat(f64),
     /// Push a string onto the operand stack.
     PushString(String),
     /// Pop a value from the operand stack into a local slot.
@@ -29,6 +31,7 @@ impl fmt::Display for Instruction {
         match self {
             Self::PushInteger(value) => write!(f, "PUSH_INTEGER {value}"),
             Self::PushBoolean(value) => write!(f, "PUSH_BOOLEAN {value}"),
+            Self::PushFloat(value) => write!(f, "PUSH_FLOAT {value}"),
             Self::PushString(value) => write!(f, "PUSH_STRING {value:?}"),
             Self::StoreLocal(slot) => write!(f, "STORE_LOCAL {slot}"),
             Self::LoadLocal(slot) => write!(f, "LOAD_LOCAL {slot}"),

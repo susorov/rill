@@ -15,12 +15,20 @@ let active = enabled
 print(enabled)
 print(active)
 
+// Print float variables
+let price = 19.95
+let cost = price
+
+print(price)
+print(cost)
+
 // Print a string variable
 let message = "Hello, Rill!"
 print(message)
 
 // Print literals directly
-print(-42)
+print(42)
+print(-42.01)
 print(true)
 print(false)
 print("No variable needed")

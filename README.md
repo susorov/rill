@@ -98,6 +98,8 @@ let count = 42
 print(count)
 print()
 print("Hello, Rill!")
+print(-1.25)
+print(true)
 ```
 Running `rill --bytecode hello.rill` produces:
 ```bash
@@ -107,5 +109,9 @@ LOAD_LOCAL 0
 PRINT
 PRINT_NEWLINE
 PUSH_STRING "Hello, Rill!"
+PRINT
+PUSH_FLOAT -1.25
+PRINT
+PUSH_BOOLEAN true
 PRINT
 ```

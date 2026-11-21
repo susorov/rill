@@ -11,6 +11,7 @@ pub enum TokenKind {
     // Values
     Identifier,
     Integer,
+    Float,
     Boolean,
     String,
 

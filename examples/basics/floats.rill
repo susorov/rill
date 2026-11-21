@@ -1,0 +1,14 @@
+// Positive and negative decimal values
+let price = 19.95
+let temperature = -4.5
+
+print(price)
+print(temperature)
+
+// Write digits on both sides of the decimal point
+let zero = 0.0
+print(zero)
+
+// A decimal point makes this a float, even though it prints as 42
+let whole = 42.0
+print(whole)

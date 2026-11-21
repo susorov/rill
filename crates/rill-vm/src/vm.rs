@@ -48,6 +48,9 @@ impl<'a> Vm<'a> {
                 Instruction::PushInteger(value) => {
                     self.stack.push(Value::Integer(*value));
                 }
+                Instruction::PushFloat(value) => {
+                    self.stack.push(Value::Float(*value));
+                }
                 Instruction::PushBoolean(value) => {
                     self.stack.push(Value::Boolean(*value));
                 }
@@ -71,6 +74,7 @@ impl<'a> Vm<'a> {
 
                     match value {
                         Value::Integer(value) => println!("{value}"),
+                        Value::Float(value) => println!("{value}"),
                         Value::Boolean(value) => println!("{value}"),
                         Value::String(value) => println!("{value}"),
                     }
@@ -100,7 +104,48 @@ impl<'a> Vm<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use Instruction::{LoadLocal, PushBoolean, PushInteger, PushString, StoreLocal};
+    use Instruction::{LoadLocal, PushBoolean, PushFloat, PushInteger, PushString, StoreLocal};
+
+    #[test]
+    fn preserves_float_values_through_locals_and_print() {
+        for expected in [
+            1.25,
+            -1.25,
+            0.0,
+            -0.0,
+            f64::MIN_POSITIVE,
+            f64::from_bits(1),
+            f64::MAX,
+        ] {
+            let bytecode = Bytecode {
+                instructions: vec![
+                    PushFloat(expected),
+                    StoreLocal(0),
+                    LoadLocal(0),
+                    StoreLocal(1),
+                    LoadLocal(0),
+                    LoadLocal(1),
+                    Instruction::Print,
+                ],
+                local_count: 2,
+            };
+            let mut vm = Vm::new(&bytecode);
+
+            vm.run().unwrap();
+
+            for local in &vm.locals {
+                let Some(Value::Float(actual)) = local else {
+                    panic!("expected float local");
+                };
+                assert_eq!(actual.to_bits(), expected.to_bits());
+            }
+            let [Value::Float(actual)] = vm.stack.as_slice() else {
+                panic!("expected one float after printing the other");
+            };
+            assert_eq!(actual.to_bits(), expected.to_bits());
+            assert_eq!(vm.instruction_pointer, bytecode.instructions.len());
+        }
+    }
 
     #[test]
     fn stores_and_copies_string_values() {

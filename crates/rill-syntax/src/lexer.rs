@@ -86,11 +86,28 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
             {
                 pos += 1;
 
-                while pos < bytes.len() && bytes[pos].is_ascii_digit() {
+                while bytes.get(pos).is_some_and(u8::is_ascii_digit) {
                     pos += 1;
                 }
 
-                TokenKind::Integer
+                if bytes.get(pos) == Some(&b'.') {
+                    pos += 1;
+
+                    if !bytes.get(pos).is_some_and(u8::is_ascii_digit) {
+                        return Err(LexError {
+                            message: "expected a digit after '.'".to_owned(),
+                            span: Span::new(start, pos),
+                        });
+                    }
+
+                    while bytes.get(pos).is_some_and(u8::is_ascii_digit) {
+                        pos += 1;
+                    }
+
+                    TokenKind::Float
+                } else {
+                    TokenKind::Integer
+                }
             }
 
             // Match keywords only after scanning the full identifier (e.g. `let_count`).
@@ -141,6 +158,44 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tokenizes_float_literals_with_spans() {
+        for literal in ["0.0", "-0.0", "3.14", "-0.5", "42.0"] {
+            for suffix in ["", ")"] {
+                let source = format!("{literal}{suffix}");
+                let tokens = tokenize(&source).unwrap();
+
+                assert_eq!(tokens[0].kind, TokenKind::Float);
+                assert_eq!(tokens[0].span, Span::new(0, literal.len()));
+                if suffix.is_empty() {
+                    assert_eq!(tokens.len(), 2);
+                } else {
+                    assert_eq!(tokens.len(), 3);
+                    assert_eq!(tokens[1].kind, TokenKind::RightParenthesis);
+                    assert_eq!(tokens[1].span, Span::new(literal.len(), source.len()));
+                }
+                let eof = tokens.last().unwrap();
+                assert_eq!(eof.kind, TokenKind::Eof);
+                assert_eq!(eof.span, Span::new(source.len(), source.len()));
+            }
+        }
+    }
+
+    #[test]
+    fn rejects_decimal_points_without_a_following_digit() {
+        for (literal, end) in [("1.", 2), ("-1.", 3), ("1.a", 2), ("1.\n", 2), ("1..2", 2)] {
+            let source = format!("let x = {literal}");
+
+            assert_eq!(
+                tokenize(&source).unwrap_err(),
+                LexError {
+                    message: "expected a digit after '.'".to_owned(),
+                    span: Span::new(8, 8 + end),
+                }
+            );
+        }
+    }
 
     #[test]
     fn tokenizes_mixed_positive_and_negative_integers_with_spans() {

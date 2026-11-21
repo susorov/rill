@@ -70,6 +70,7 @@ impl Compiler {
         let instruction = match &expression.kind {
             ExpressionKind::Integer(value) => Instruction::PushInteger(*value),
             ExpressionKind::Boolean(value) => Instruction::PushBoolean(*value),
+            ExpressionKind::Float(value) => Instruction::PushFloat(*value),
             ExpressionKind::String(value) => Instruction::PushString(value.clone()),
             ExpressionKind::Identifier(name) => {
                 let slot = self.locals.get(name).ok_or_else(|| CompileError {
@@ -88,8 +89,44 @@ impl Compiler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use Instruction::{LoadLocal, PushBoolean, PushInteger, PushString, StoreLocal};
+    use Instruction::{LoadLocal, PushBoolean, PushFloat, PushInteger, PushString, StoreLocal};
     use rill_syntax::parser::parse;
+
+    #[test]
+    fn compiles_float_literals_and_references() {
+        for (literal, expected) in [
+            ("1.25", 1.25_f64),
+            ("-1.25", -1.25),
+            ("42.0", 42.0),
+            ("0.0", 0.0),
+            ("-0.0", -0.0),
+        ] {
+            let source =
+                format!("let value = {literal}\nlet copy = value\nprint(copy)\nprint(value)");
+            let bytecode = compile(&parse(&source).unwrap()).unwrap();
+
+            assert_eq!(
+                bytecode,
+                Bytecode {
+                    instructions: vec![
+                        PushFloat(expected),
+                        StoreLocal(0),
+                        LoadLocal(0),
+                        StoreLocal(1),
+                        LoadLocal(1),
+                        Instruction::Print,
+                        LoadLocal(0),
+                        Instruction::Print,
+                    ],
+                    local_count: 2,
+                }
+            );
+            let PushFloat(actual) = &bytecode.instructions[0] else {
+                panic!("expected float instruction");
+            };
+            assert_eq!(actual.to_bits(), expected.to_bits());
+        }
+    }
 
     #[test]
     fn compiles_string_literals_and_references() {
@@ -118,13 +155,15 @@ mod tests {
 
     #[test]
     fn compiles_literal_and_empty_print_statements() {
-        let source = "print(42)\nprint(true)\nprint(false)\nprint(\"hello\")\nprint(\"\")\nprint()";
+        let source = "print(42)\nprint(-1.25)\nprint(true)\nprint(false)\nprint(\"hello\")\nprint(\"\")\nprint()";
 
         assert_eq!(
             compile(&parse(source).unwrap()).unwrap(),
             Bytecode {
                 instructions: vec![
                     PushInteger(42),
+                    Instruction::Print,
+                    PushFloat(-1.25),
                     Instruction::Print,
                     PushBoolean(true),
                     Instruction::Print,

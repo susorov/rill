@@ -1,0 +1,9 @@
+// Float values can be referenced by later variables
+let rate = 1.25
+let copy = rate
+let latest = copy
+
+// Each reference preserves the float value
+print(rate)
+print(copy)
+print(latest)

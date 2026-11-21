@@ -112,6 +112,24 @@ impl<'a> Parser<'a> {
                 ExpressionKind::Integer(value)
             }
 
+            TokenKind::Float => {
+                let value = self.source[token.span.start..token.span.end]
+                    .parse::<f64>()
+                    .map_err(|_| ParseError {
+                        message: "float literal is out of range for f64".into(),
+                        span: token.span.clone(),
+                    })?;
+
+                if !value.is_finite() {
+                    return Err(ParseError {
+                        message: "float literal is out of range for f64".into(),
+                        span: token.span.clone(),
+                    });
+                }
+
+                ExpressionKind::Float(value)
+            }
+
             TokenKind::Boolean => {
                 let value = self.source[token.span.start..token.span.end]
                     .parse::<bool>()
@@ -169,6 +187,65 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parses_float_declarations_with_source_spans_and_signs() {
+        for (literal, expected) in [
+            ("0.0", 0.0_f64),
+            ("-0.0", -0.0),
+            ("1.25", 1.25),
+            ("-42.25", -42.25),
+            ("42.0", 42.0),
+            ("0.1", 0.1),
+        ] {
+            let source = format!("let value = {literal}");
+            let program = parse(&source).unwrap();
+            let Statement::Let { name, value, span } = &program.statements[0] else {
+                panic!("expected let statement");
+            };
+            let ExpressionKind::Float(actual) = &value.kind else {
+                panic!("expected float expression");
+            };
+
+            assert_eq!(name, "value");
+            // Bit comparison also distinguishes negative zero from positive zero.
+            assert_eq!(actual.to_bits(), expected.to_bits());
+            assert_eq!(value.span, Span::new(12, source.len()));
+            assert_eq!(*span, Span::new(0, source.len()));
+        }
+    }
+
+    #[test]
+    fn accepts_finite_float_limits_and_subnormal_values() {
+        for expected in [f64::MAX, -f64::MAX, f64::MIN_POSITIVE, f64::from_bits(1)] {
+            // Fixed-point notation stays within the supported decimal syntax.
+            let source = format!("let value = {expected:.324}");
+            let program = parse(&source).unwrap();
+            let Statement::Let { value, .. } = &program.statements[0] else {
+                panic!("expected let statement");
+            };
+            let ExpressionKind::Float(actual) = &value.kind else {
+                panic!("expected float expression");
+            };
+
+            assert_eq!(actual.to_bits(), expected.to_bits());
+        }
+    }
+
+    #[test]
+    fn rejects_float_overflow_with_literal_span() {
+        for sign in ["", "-"] {
+            let source = format!("let value = {sign}{}.0", "9".repeat(309));
+
+            assert_eq!(
+                parse(&source).unwrap_err(),
+                ParseError {
+                    message: "float literal is out of range for f64".to_owned(),
+                    span: Span::new(12, source.len()),
+                }
+            );
+        }
+    }
 
     #[test]
     fn parses_string_declarations_with_source_spans() {
@@ -439,6 +516,9 @@ fn parses_print_statement() {
     for (argument, kind) in [
         ("count", ExpressionKind::Identifier("count".to_owned())),
         ("42", ExpressionKind::Integer(42)),
+        ("1.25", ExpressionKind::Float(1.25)),
+        ("-0.5", ExpressionKind::Float(-0.5)),
+        ("42.0", ExpressionKind::Float(42.0)),
         ("true", ExpressionKind::Boolean(true)),
         ("false", ExpressionKind::Boolean(false)),
         (
