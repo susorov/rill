@@ -1,5 +1,5 @@
 use crate::span::Span;
-use crate::token::{Token, TokenKind};
+use crate::token::{Operator, Token, TokenKind};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct LexError {
@@ -58,17 +58,17 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
 
             b'=' if bytes.get(pos + 1) == Some(&b'=') => {
                 pos += 2;
-                TokenKind::Equal
+                TokenKind::Operator(Operator::Equal)
             }
 
             b'!' if bytes.get(pos + 1) == Some(&b'=') => {
                 pos += 2;
-                TokenKind::NotEqual
+                TokenKind::Operator(Operator::NotEqual)
             }
 
             b'=' => {
                 pos += 1;
-                TokenKind::Assign
+                TokenKind::Operator(Operator::Assign)
             }
 
             b'"' => {
@@ -338,7 +338,7 @@ mod tests {
                     TokenKind::Newline,
                     TokenKind::LetKeyword,
                     TokenKind::Identifier,
-                    TokenKind::Assign,
+                    TokenKind::Operator(Operator::Assign),
                     TokenKind::IntegerLiteral,
                     TokenKind::Eof,
                 ]
@@ -427,7 +427,7 @@ mod tests {
             vec![
                 TokenKind::LetKeyword,
                 TokenKind::Identifier,
-                TokenKind::Assign,
+                TokenKind::Operator(Operator::Assign),
                 TokenKind::IntegerLiteral,
                 TokenKind::Newline,
                 TokenKind::Eof,
@@ -534,7 +534,7 @@ fn tokenizes_print_statement() {
 #[test]
 fn tokenizes_not_equal_with_span() {
     let tokens = tokenize("1!=2").unwrap();
-    assert_eq!(tokens[1].kind, TokenKind::NotEqual);
+    assert_eq!(tokens[1].kind, TokenKind::Operator(Operator::NotEqual));
     assert_eq!(tokens[1].span, Span::new(1, 3));
     assert!(tokenize("!").is_err());
 }

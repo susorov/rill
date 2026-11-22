@@ -16,10 +16,7 @@ pub enum TokenKind {
     BooleanLiteral,
     StringLiteral,
 
-    // Operators
-    Assign,
-    Equal,
-    NotEqual,
+    Operator(Operator),
 
     // Separators
     Newline,
@@ -28,6 +25,13 @@ pub enum TokenKind {
 
     // Special
     Eof,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Operator {
+    Assign,
+    Equal,
+    NotEqual,
 }
 
 #[derive(Debug)]

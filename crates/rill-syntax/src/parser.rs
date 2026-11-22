@@ -1,7 +1,7 @@
 use crate::ast::{BinaryOperator, Expression, ExpressionKind, Program, Statement};
 use crate::lexer::tokenize;
 use crate::span::Span;
-use crate::token::{Token, TokenKind};
+use crate::token::{Operator, Token, TokenKind};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseError {
@@ -67,7 +67,7 @@ impl<'a> Parser<'a> {
         let name = self.expect(TokenKind::Identifier, "expected an identifier")?;
         let name = self.source[name.span.start..name.span.end].to_owned();
 
-        self.expect(TokenKind::Assign, "expected '='")?;
+        self.expect(TokenKind::Operator(Operator::Assign), "expected '='")?;
 
         let value = self.parse_expression()?;
         let span = Span::new(start, value.span.end);
@@ -104,8 +104,8 @@ impl<'a> Parser<'a> {
         let left = self.parse_primary()?;
 
         let operator = match self.current().kind {
-            TokenKind::Equal => BinaryOperator::Equal,
-            TokenKind::NotEqual => BinaryOperator::NotEqual,
+            TokenKind::Operator(Operator::Equal) => BinaryOperator::Equal,
+            TokenKind::Operator(Operator::NotEqual) => BinaryOperator::NotEqual,
             _ => return Ok(left),
         };
 
