@@ -3,8 +3,29 @@
 The CLI reads a `.rill` file and passes its contents through the syntax,
 compiler, and VM crates.
 
-```text
-Source -> Tokens -> Syntax tree -> Bytecode -> Execution
+```mermaid
+flowchart LR
+    Source[".rill source"]
+
+    subgraph syntax["rill-syntax"]
+        Tokens["Tokens"]
+        AST["Syntax tree"]
+        Tokens --> AST
+    end
+
+    subgraph compiler["rill-compiler"]
+        Bytecode["Bytecode"]
+    end
+
+    subgraph vm["rill-vm"]
+        Execution["Execution"]
+    end
+
+    Source --> Tokens
+    AST --> Bytecode
+    Bytecode --> Execution
+
+    Bytecode -.->|"--bytecode"| Listing["Instruction listing"]
 ```
 
 - **rill-syntax** turns source text into tokens and parses them into a syntax tree.
