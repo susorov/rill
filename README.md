@@ -55,5 +55,6 @@ rill --help
 
 ## Documentation
 
+- [Architecture](docs/ARCHITECTURE.md) describes the crates and how a source file becomes a running program.
 - [Language grammar](docs/GRAMMAR.md) covers syntax, types, and variable declarations.
 - [Bytecode guide](docs/BYTECODE.md) explains the VM instructions with a complete example.
