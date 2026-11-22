@@ -1,5 +1,5 @@
 use crate::span::Span;
-use crate::token::{Keyword, Literal, Operator, Token, TokenKind};
+use crate::token::{Delimiter, Keyword, Literal, Operator, Token, TokenKind};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct LexError {
@@ -38,12 +38,12 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
 
             b'(' => {
                 pos += 1;
-                TokenKind::LeftParenthesis
+                TokenKind::Delimiter(Delimiter::LeftParenthesis)
             }
 
             b')' => {
                 pos += 1;
-                TokenKind::RightParenthesis
+                TokenKind::Delimiter(Delimiter::RightParenthesis)
             }
 
             b'/' if bytes.get(pos + 1) == Some(&b'/') => {
@@ -183,7 +183,10 @@ mod tests {
                     assert_eq!(tokens.len(), 2);
                 } else {
                     assert_eq!(tokens.len(), 3);
-                    assert_eq!(tokens[1].kind, TokenKind::RightParenthesis);
+                    assert_eq!(
+                        tokens[1].kind,
+                        TokenKind::Delimiter(Delimiter::RightParenthesis)
+                    );
                     assert_eq!(tokens[1].span, Span::new(literal.len(), source.len()));
                 }
                 let eof = tokens.last().unwrap();
@@ -281,13 +284,13 @@ mod tests {
             tokens.iter().map(|token| token.kind).collect::<Vec<_>>(),
             vec![
                 TokenKind::Keyword(Keyword::Print),
-                TokenKind::LeftParenthesis,
+                TokenKind::Delimiter(Delimiter::LeftParenthesis),
                 TokenKind::Literal(Literal::String),
-                TokenKind::RightParenthesis,
+                TokenKind::Delimiter(Delimiter::RightParenthesis),
                 TokenKind::Newline,
                 TokenKind::Keyword(Keyword::Print),
-                TokenKind::LeftParenthesis,
-                TokenKind::RightParenthesis,
+                TokenKind::Delimiter(Delimiter::LeftParenthesis),
+                TokenKind::Delimiter(Delimiter::RightParenthesis),
                 TokenKind::Eof,
             ]
         );
@@ -518,9 +521,9 @@ fn tokenizes_print_statement() {
         kinds,
         vec![
             TokenKind::Keyword(Keyword::Print),
-            TokenKind::LeftParenthesis,
+            TokenKind::Delimiter(Delimiter::LeftParenthesis),
             TokenKind::Identifier,
-            TokenKind::RightParenthesis,
+            TokenKind::Delimiter(Delimiter::RightParenthesis),
             TokenKind::Eof,
         ]
     );

@@ -6,13 +6,8 @@ pub enum TokenKind {
     Identifier,
     Literal(Literal),
     Operator(Operator),
-
-    // Separators
+    Delimiter(Delimiter),
     Newline,
-    LeftParenthesis,
-    RightParenthesis,
-
-    // Special
     Eof,
 }
 
@@ -38,6 +33,12 @@ pub enum Operator {
     Assign,
     Equal,
     NotEqual,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Delimiter {
+    LeftParenthesis,
+    RightParenthesis,
 }
 
 #[derive(Debug)]

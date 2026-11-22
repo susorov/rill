@@ -1,7 +1,7 @@
 use crate::ast::{BinaryOperator, Expression, ExpressionKind, Program, Statement};
 use crate::lexer::tokenize;
 use crate::span::Span;
-use crate::token::{Keyword, Literal, Operator, Token, TokenKind};
+use crate::token::{Delimiter, Keyword, Literal, Operator, Token, TokenKind};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseError {
@@ -81,16 +81,22 @@ impl<'a> Parser<'a> {
             .span
             .start;
 
-        self.expect(TokenKind::LeftParenthesis, "expected '('")?;
+        self.expect(
+            TokenKind::Delimiter(Delimiter::LeftParenthesis),
+            "expected '('",
+        )?;
 
-        let value = if self.current().kind == TokenKind::RightParenthesis {
+        let value = if self.current().kind == TokenKind::Delimiter(Delimiter::RightParenthesis) {
             None
         } else {
             Some(self.parse_expression()?)
         };
 
         let end = self
-            .expect(TokenKind::RightParenthesis, "expected ')'")?
+            .expect(
+                TokenKind::Delimiter(Delimiter::RightParenthesis),
+                "expected ')'",
+            )?
             .span
             .end;
 
