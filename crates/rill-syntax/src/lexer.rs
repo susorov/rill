@@ -61,6 +61,11 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
                 TokenKind::Equal
             }
 
+            b'!' if bytes.get(pos + 1) == Some(&b'=') => {
+                pos += 2;
+                TokenKind::NotEqual
+            }
+
             b'=' => {
                 pos += 1;
                 TokenKind::Assign
@@ -524,4 +529,12 @@ fn tokenizes_print_statement() {
     assert_eq!(tokens[1].span, Span::new(5, 6));
     assert_eq!(tokens[2].span, Span::new(6, 11));
     assert_eq!(tokens[3].span, Span::new(11, 12));
+}
+
+#[test]
+fn tokenizes_not_equal_with_span() {
+    let tokens = tokenize("1!=2").unwrap();
+    assert_eq!(tokens[1].kind, TokenKind::NotEqual);
+    assert_eq!(tokens[1].span, Span::new(1, 3));
+    assert!(tokenize("!").is_err());
 }

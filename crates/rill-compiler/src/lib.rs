@@ -101,12 +101,10 @@ impl Compiler {
                 operator,
                 right,
             } => {
-                if *operator != BinaryOperator::Equal {
-                    return Err(CompileError {
-                        message: format!("unsupported binary operator: {operator:?}"),
-                        span: expression.span.clone(),
-                    });
-                }
+                let instruction = match operator {
+                    BinaryOperator::Equal => Instruction::Equal,
+                    BinaryOperator::NotEqual => Instruction::NotEqual,
+                };
                 let left_type = self.compile_expression(left)?;
                 let right_type = self.compile_expression(right)?;
                 if left_type != right_type {
@@ -117,7 +115,7 @@ impl Compiler {
                         span: expression.span.clone(),
                     });
                 }
-                (Instruction::Equal, ExpressionType::Boolean)
+                (instruction, ExpressionType::Boolean)
             }
         };
 
@@ -391,6 +389,41 @@ print(b == 1)",
                 message: "undefined variable 'missing'".to_owned(),
                 span: Span::new(6, 13),
             }
+        );
+    }
+}
+
+#[test]
+fn compiles_not_equal_and_checks_types() {
+    use rill_syntax::parser::parse;
+    let code = compile(
+        &parse(
+            "let a = 10
+let b = a != 20
+print(b != false)",
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        code.instructions
+            .iter()
+            .filter(|i| **i == Instruction::NotEqual)
+            .count(),
+        2
+    );
+    for source in [
+        "print(10 != true)",
+        "let a = 10
+print(a != 10.0)",
+        "let b = 1 != 2
+print(b != 1)",
+    ] {
+        assert!(
+            compile(&parse(source).unwrap())
+                .unwrap_err()
+                .message
+                .contains("same type")
         );
     }
 }

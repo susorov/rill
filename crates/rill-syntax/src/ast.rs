@@ -49,4 +49,5 @@ pub enum ExpressionType {
 #[derive(Debug, Clone, PartialEq)]
 pub enum BinaryOperator {
     Equal,
+    NotEqual,
 }

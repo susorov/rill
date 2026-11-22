@@ -1,0 +1,10 @@
+let a = 10
+let b = a != 20
+print(b)
+print(a != 10)
+print(1.0 != 2.0)
+print(0.0 != -0.0)
+print("hello" != "world")
+print("hello" != "hello")
+print(b != false)
+print(true != true)

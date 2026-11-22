@@ -103,20 +103,21 @@ impl<'a> Parser<'a> {
     fn parse_expression(&mut self) -> Result<Expression, ParseError> {
         let left = self.parse_primary()?;
 
-        if self.current().kind != TokenKind::Equal {
-            return Ok(left);
-        }
+        let operator = match self.current().kind {
+            TokenKind::Equal => BinaryOperator::Equal,
+            TokenKind::NotEqual => BinaryOperator::NotEqual,
+            _ => return Ok(left),
+        };
 
         self.pos += 1;
 
         let right = self.parse_primary()?;
-
         let span = Span::new(left.span.start, right.span.end);
 
         Ok(Expression {
             kind: ExpressionKind::Binary {
                 left: Box::new(left),
-                operator: BinaryOperator::Equal,
+                operator,
                 right: Box::new(right),
             },
             span,
@@ -638,6 +639,35 @@ fn rejects_missing_operands_and_chained_equality() {
         "let b = 10 ==",
         "print(10 ==)",
         "let b = 1 == 1 == true",
+    ] {
+        assert!(parse(source).is_err(), "{source}");
+    }
+}
+
+#[test]
+fn parses_not_equal_and_rejects_incomplete_comparisons() {
+    for source in ["let b = 10 != 20", "print(10!=20)"] {
+        let program = parse(source).unwrap();
+        let value = match &program.statements[0] {
+            Statement::Let { value, .. } => value,
+            Statement::Print {
+                value: Some(value), ..
+            } => value,
+            _ => panic!("expected expression"),
+        };
+        assert!(matches!(
+            value.kind,
+            ExpressionKind::Binary {
+                operator: BinaryOperator::NotEqual,
+                ..
+            }
+        ));
+    }
+    for source in [
+        "print(10 !=)",
+        "let b = != 10",
+        "print(1 != 2 == true)",
+        "print(1 != 2 != 3)",
     ] {
         assert!(parse(source).is_err(), "{source}");
     }

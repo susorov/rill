@@ -51,8 +51,16 @@ Spaces and tabs are ignored outside strings.
 
 Strings use double quotes. They cannot contain double quotes or newlines. Backslashes are treated as normal characters; escape sequences are not supported.
 
+## Comparisons
+
+`==` tests equality and `!=` tests inequality: `let b = 10 != 20`.
+Both return a boolean and require operands of the same type. Mixed types,
+including integers versus floats, are compile time errors. Strings compare by
+content; floats use exact numeric equality, so `0.0 != -0.0` is false.
+Comparisons cannot be chained.
+
 ## Limitations
 
-Rill currently does not support operators, expression grouping, type annotations, control flow, or variable reassignment.
+Rill currently does not support other operators, expression grouping, type annotations, control flow, or variable reassignment.
 
 Line endings can be LF, CRLF, or CR.

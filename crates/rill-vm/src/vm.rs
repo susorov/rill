@@ -72,17 +72,10 @@ impl<'a> Vm<'a> {
                     self.stack.push(value);
                 }
                 Instruction::Equal => {
-                    if self.stack.len() < 2 {
-                        return Err(VmError::StackUnderflow);
-                    }
-                    let left = &self.stack[self.stack.len() - 2];
-                    let right = &self.stack[self.stack.len() - 1];
-                    if std::mem::discriminant(left) != std::mem::discriminant(right) {
-                        return Err(VmError::TypeMismatch);
-                    }
-                    let equal = left == right;
-                    self.stack.truncate(self.stack.len() - 2);
-                    self.stack.push(Value::Boolean(equal));
+                    self.binary(|left, right| Ok(Value::Boolean(equal(left, right)?)))?;
+                }
+                Instruction::NotEqual => {
+                    self.binary(|left, right| Ok(Value::Boolean(!equal(left, right)?)))?;
                 }
                 Instruction::Print => {
                     let value = self.stack.pop().ok_or(VmError::StackUnderflow)?;
@@ -105,6 +98,22 @@ impl<'a> Vm<'a> {
         Ok(())
     }
 
+    fn binary(
+        &mut self,
+        operation: impl FnOnce(&Value, &Value) -> Result<Value, VmError>,
+    ) -> Result<(), VmError> {
+        let len = self.stack.len();
+        if len < 2 {
+            return Err(VmError::StackUnderflow);
+        }
+
+        let result = operation(&self.stack[len - 2], &self.stack[len - 1])?;
+
+        self.stack.truncate(len - 2);
+        self.stack.push(result);
+        Ok(())
+    }
+
     fn local_index(&self, slot: u32) -> Result<usize, VmError> {
         let index = slot as usize;
 
@@ -113,6 +122,16 @@ impl<'a> Vm<'a> {
         }
 
         Ok(index)
+    }
+}
+
+fn equal(left: &Value, right: &Value) -> Result<bool, VmError> {
+    match (left, right) {
+        (Value::Integer(a), Value::Integer(b)) => Ok(a == b),
+        (Value::Float(a), Value::Float(b)) => Ok(a == b),
+        (Value::Boolean(a), Value::Boolean(b)) => Ok(a == b),
+        (Value::String(a), Value::String(b)) => Ok(a == b),
+        _ => Err(VmError::TypeMismatch),
     }
 }
 
@@ -136,19 +155,33 @@ mod tests {
                 false,
             ),
         ] {
-            let code = Bytecode {
-                instructions: vec![left, right, Instruction::Equal],
-                local_count: 0,
-            };
-            let mut vm = Vm::new(&code);
-            vm.run().unwrap();
-            assert_eq!(vm.stack, vec![Value::Boolean(expected)]);
+            for (operator, result) in [
+                (Instruction::Equal, expected),
+                (Instruction::NotEqual, !expected),
+            ] {
+                let code = Bytecode {
+                    instructions: vec![left.clone(), right.clone(), operator],
+                    local_count: 0,
+                };
+                let mut vm = Vm::new(&code);
+                vm.run().unwrap();
+                assert_eq!(vm.stack, vec![Value::Boolean(result)]);
+            }
         }
     }
 
     #[test]
     fn equality_errors_preserve_operands() {
         for (instructions, expected) in [
+            (vec![Instruction::NotEqual], VmError::StackUnderflow),
+            (
+                vec![PushInteger(1), Instruction::NotEqual],
+                VmError::StackUnderflow,
+            ),
+            (
+                vec![PushInteger(1), PushBoolean(true), Instruction::NotEqual],
+                VmError::TypeMismatch,
+            ),
             (vec![Instruction::Equal], VmError::StackUnderflow),
             (
                 vec![PushInteger(1), Instruction::Equal],
