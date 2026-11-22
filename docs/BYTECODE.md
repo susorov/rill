@@ -5,7 +5,7 @@ The virtual machine executes instructions in order and uses a stack to pass
 values between them.
 
 Save this program as `example.rill` and run `rill --bytecode example.rill`.
-The listing shows all eight instructions.
+The compiler emits 11 instructions that use all eight opcodes.
 
 ```rill
 let count = 42
