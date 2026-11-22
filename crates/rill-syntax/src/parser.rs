@@ -1,7 +1,7 @@
 use crate::ast::{BinaryOperator, Expression, ExpressionKind, Program, Statement};
 use crate::lexer::tokenize;
 use crate::span::Span;
-use crate::token::{Literal, Operator, Token, TokenKind};
+use crate::token::{Keyword, Literal, Operator, Token, TokenKind};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseError {
@@ -54,14 +54,14 @@ impl<'a> Parser<'a> {
 
     fn parse_statement(&mut self) -> Result<Statement, ParseError> {
         match self.current().kind {
-            TokenKind::PrintKeyword => self.parse_print_statement(),
+            TokenKind::Keyword(Keyword::Print) => self.parse_print_statement(),
             _ => self.parse_let_statement(),
         }
     }
 
     fn parse_let_statement(&mut self) -> Result<Statement, ParseError> {
         let start = self
-            .expect(TokenKind::LetKeyword, "expected 'let'")?
+            .expect(TokenKind::Keyword(Keyword::Let), "expected 'let'")?
             .span
             .start;
         let name = self.expect(TokenKind::Identifier, "expected an identifier")?;
@@ -77,7 +77,7 @@ impl<'a> Parser<'a> {
 
     fn parse_print_statement(&mut self) -> Result<Statement, ParseError> {
         let start = self
-            .expect(TokenKind::PrintKeyword, "expected 'print'")?
+            .expect(TokenKind::Keyword(Keyword::Print), "expected 'print'")?
             .span
             .start;
 

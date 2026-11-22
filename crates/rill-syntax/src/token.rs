@@ -2,14 +2,7 @@ use crate::span::Span;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenKind {
-    // Keywords
-    LetKeyword,
-    IntKeyword,
-    BoolKeyword,
-    FloatKeyword,
-    PrintKeyword,
-
-    // Values
+    Keyword(Keyword),
     Identifier,
     Literal(Literal),
     Operator(Operator),
@@ -21,6 +14,15 @@ pub enum TokenKind {
 
     // Special
     Eof,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Keyword {
+    Let,
+    Int,
+    Bool,
+    Float,
+    Print,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
