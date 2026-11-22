@@ -53,65 +53,7 @@ rill --version
 rill --help
 ```
 
-## Language Features
+## Documentation
 
-Rill currently supports integer and boolean values, variable declarations, variable references, single-line comments, and basic output.
-
-### Variables
-
-Variables are declared using `let`. Types are inferred automatically.
-
-```bash
-let count = 42
-let limit = count
-let enabled = true
-```
-
-### Comments
-
-Single-line comments begin with `//`.
-
-```bash
-// This is a comment
-let greeting = "Hello, Rill!" // Inline comment
-```
-
-### Output
-
-Use `print()` to display a variable or print an empty line.
-
-```bash
-let count = 42
-let enabled = true
-
-print(count)
-print()
-print(enabled)
-```
-
-### Bytecode
-
-Rill compiles source code into bytecode executed by its virtual machine.
-
-```bash
-let count = 42
-print(count)
-print()
-print("Hello, Rill!")
-print(-1.25)
-print(true)
-```
-Running `rill --bytecode hello.rill` produces:
-```bash
-PUSH_INTEGER 42
-STORE_LOCAL 0
-LOAD_LOCAL 0
-PRINT
-PRINT_NEWLINE
-PUSH_STRING "Hello, Rill!"
-PRINT
-PUSH_FLOAT -1.25
-PRINT
-PUSH_BOOLEAN true
-PRINT
-```
+- [Language grammar](docs/GRAMMAR.md) covers syntax, types, and variable declarations.
+- [Bytecode guide](docs/BYTECODE.md) explains the VM instructions with a complete example.
