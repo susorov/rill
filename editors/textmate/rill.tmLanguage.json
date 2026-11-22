@@ -26,13 +26,7 @@
     {
       "name": "string.quoted.double.rill",
       "begin": "\"",
-      "end": "\"",
-      "patterns": [
-        {
-          "name": "constant.character.escape.rill",
-          "match": "\\\\."
-        }
-      ]
+      "end": "\""
     },
     {
       "name": "entity.name.function.rill",
