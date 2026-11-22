@@ -8,6 +8,7 @@ pub enum VmError {
     InvalidLocal(u32),
     UninitializedLocal(u32),
     StackUnderflow,
+    TypeMismatch,
 }
 
 impl fmt::Display for VmError {
@@ -17,6 +18,7 @@ impl fmt::Display for VmError {
             Self::UninitializedLocal(slot) => {
                 write!(f, "uninitialized local slot {slot}")
             }
+            Self::TypeMismatch => write!(f, "equality operands must have the same type"),
             Self::StackUnderflow => write!(f, "operand stack underflow"),
         }
     }
@@ -69,6 +71,19 @@ impl<'a> Vm<'a> {
                         .ok_or(VmError::UninitializedLocal(*slot))?;
                     self.stack.push(value);
                 }
+                Instruction::Equal => {
+                    if self.stack.len() < 2 {
+                        return Err(VmError::StackUnderflow);
+                    }
+                    let left = &self.stack[self.stack.len() - 2];
+                    let right = &self.stack[self.stack.len() - 1];
+                    if std::mem::discriminant(left) != std::mem::discriminant(right) {
+                        return Err(VmError::TypeMismatch);
+                    }
+                    let equal = left == right;
+                    self.stack.truncate(self.stack.len() - 2);
+                    self.stack.push(Value::Boolean(equal));
+                }
                 Instruction::Print => {
                     let value = self.stack.pop().ok_or(VmError::StackUnderflow)?;
 
@@ -105,6 +120,56 @@ impl<'a> Vm<'a> {
 mod tests {
     use super::*;
     use Instruction::{LoadLocal, PushBoolean, PushFloat, PushInteger, PushString, StoreLocal};
+
+    #[test]
+    fn equality_compares_all_value_types() {
+        for (left, right, expected) in [
+            (PushInteger(10), PushInteger(10), true),
+            (PushInteger(10), PushInteger(20), false),
+            (PushFloat(0.0), PushFloat(-0.0), true),
+            (PushFloat(1.0), PushFloat(2.0), false),
+            (PushBoolean(true), PushBoolean(false), false),
+            (PushString("hello".into()), PushString("hello".into()), true),
+            (
+                PushString("hello".into()),
+                PushString("world".into()),
+                false,
+            ),
+        ] {
+            let code = Bytecode {
+                instructions: vec![left, right, Instruction::Equal],
+                local_count: 0,
+            };
+            let mut vm = Vm::new(&code);
+            vm.run().unwrap();
+            assert_eq!(vm.stack, vec![Value::Boolean(expected)]);
+        }
+    }
+
+    #[test]
+    fn equality_errors_preserve_operands() {
+        for (instructions, expected) in [
+            (vec![Instruction::Equal], VmError::StackUnderflow),
+            (
+                vec![PushInteger(1), Instruction::Equal],
+                VmError::StackUnderflow,
+            ),
+            (
+                vec![PushInteger(1), PushBoolean(true), Instruction::Equal],
+                VmError::TypeMismatch,
+            ),
+        ] {
+            let count = instructions.len() - 1;
+            let code = Bytecode {
+                instructions,
+                local_count: 0,
+            };
+            let mut vm = Vm::new(&code);
+            assert_eq!(vm.run(), Err(expected));
+            assert_eq!(vm.stack.len(), count);
+            assert_eq!(vm.instruction_pointer, count);
+        }
+    }
 
     #[test]
     fn preserves_float_values_through_locals_and_print() {

@@ -18,6 +18,7 @@ pub enum TokenKind {
 
     // Operators
     Assign,
+    Equal,
 
     // Separators
     Newline,

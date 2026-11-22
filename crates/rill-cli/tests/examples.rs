@@ -32,6 +32,7 @@ fn all_examples_run_successfully() {
             );
 
             let expected = match path.file_name().unwrap().to_str().unwrap() {
+                "equality.rill" => "true\ntrue\nfalse\ntrue\ntrue\ntrue\n",
                 "floats.rill" => "19.95\n-4.5\n0\n42\n",
                 "float_references.rill" => "1.25\n1.25\n1.25\n",
                 "strings.rill" => "Hello, Rill!\n\n// this is text\n",

@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use rill_syntax::ast::{Expression, ExpressionKind, Program, Statement};
+use rill_syntax::ast::{
+    BinaryOperator, Expression, ExpressionKind, ExpressionType, Program, Statement,
+};
 use rill_syntax::span::Span;
 use rill_vm::bytecode::{Bytecode, Instruction};
 
@@ -26,8 +28,13 @@ pub fn compile(program: &Program) -> Result<Bytecode, CompileError> {
     Ok(compiler.bytecode)
 }
 
+struct Local {
+    slot: u32,
+    value_type: ExpressionType,
+}
+
 struct Compiler {
-    locals: HashMap<String, u32>,
+    locals: HashMap<String, Local>,
     bytecode: Bytecode,
 }
 
@@ -41,7 +48,7 @@ impl Compiler {
                         span: span.clone(),
                     });
                 }
-                self.compile_expression(value)?;
+                let value_type = self.compile_expression(value)?;
 
                 let slot = self.bytecode.local_count;
                 self.bytecode.local_count = slot.checked_add(1).ok_or_else(|| CompileError {
@@ -51,7 +58,7 @@ impl Compiler {
                 self.bytecode
                     .instructions
                     .push(Instruction::StoreLocal(slot));
-                self.locals.insert(name.clone(), slot);
+                self.locals.insert(name.clone(), Local { slot, value_type });
             }
             Statement::Print { value, .. } => {
                 if let Some(value) = value {
@@ -66,23 +73,56 @@ impl Compiler {
         Ok(())
     }
 
-    fn compile_expression(&mut self, expression: &Expression) -> Result<(), CompileError> {
-        let instruction = match &expression.kind {
-            ExpressionKind::Integer(value) => Instruction::PushInteger(*value),
-            ExpressionKind::Boolean(value) => Instruction::PushBoolean(*value),
-            ExpressionKind::Float(value) => Instruction::PushFloat(*value),
-            ExpressionKind::String(value) => Instruction::PushString(value.clone()),
+    fn compile_expression(
+        &mut self,
+        expression: &Expression,
+    ) -> Result<ExpressionType, CompileError> {
+        let (instruction, value_type) = match &expression.kind {
+            ExpressionKind::Integer(value) => {
+                (Instruction::PushInteger(*value), ExpressionType::Integer)
+            }
+            ExpressionKind::Boolean(value) => {
+                (Instruction::PushBoolean(*value), ExpressionType::Boolean)
+            }
+            ExpressionKind::Float(value) => (Instruction::PushFloat(*value), ExpressionType::Float),
+            ExpressionKind::String(value) => (
+                Instruction::PushString(value.clone()),
+                ExpressionType::String,
+            ),
             ExpressionKind::Identifier(name) => {
-                let slot = self.locals.get(name).ok_or_else(|| CompileError {
+                let local = self.locals.get(name).ok_or_else(|| CompileError {
                     message: format!("undefined variable '{name}'"),
                     span: expression.span.clone(),
                 })?;
-                Instruction::LoadLocal(*slot)
+                (Instruction::LoadLocal(local.slot), local.value_type)
+            }
+            ExpressionKind::Binary {
+                left,
+                operator,
+                right,
+            } => {
+                if *operator != BinaryOperator::Equal {
+                    return Err(CompileError {
+                        message: format!("unsupported binary operator: {operator:?}"),
+                        span: expression.span.clone(),
+                    });
+                }
+                let left_type = self.compile_expression(left)?;
+                let right_type = self.compile_expression(right)?;
+                if left_type != right_type {
+                    return Err(CompileError {
+                        message: format!(
+                            "cannot compare {left_type:?} with {right_type:?}: operands must have the same type"
+                        ),
+                        span: expression.span.clone(),
+                    });
+                }
+                (Instruction::Equal, ExpressionType::Boolean)
             }
         };
 
         self.bytecode.instructions.push(instruction);
-        Ok(())
+        Ok(value_type)
     }
 }
 
@@ -91,6 +131,34 @@ mod tests {
     use super::*;
     use Instruction::{LoadLocal, PushBoolean, PushFloat, PushInteger, PushString, StoreLocal};
     use rill_syntax::parser::parse;
+
+    #[test]
+    fn infers_equality_types_through_variable_copies() {
+        let source = "let a = 10
+let copy = a
+let b = copy == 10
+let c = b
+print(c == true)";
+        let code = compile(&parse(source).unwrap()).unwrap();
+        assert_eq!(
+            code.instructions
+                .iter()
+                .filter(|i| **i == Instruction::Equal)
+                .count(),
+            2
+        );
+        assert_eq!(code.local_count, 4);
+        for source in [
+            "let a = 10
+print(a == true)",
+            "print(10 == 10.0)",
+            "let b = 1 == 1
+print(b == 1)",
+        ] {
+            let error = compile(&parse(source).unwrap()).unwrap_err();
+            assert!(error.message.contains("same type"));
+        }
+    }
 
     #[test]
     fn compiles_float_literals_and_references() {

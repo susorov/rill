@@ -56,6 +56,11 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
                 continue;
             }
 
+            b'=' if bytes.get(pos + 1) == Some(&b'=') => {
+                pos += 2;
+                TokenKind::Equal
+            }
+
             b'=' => {
                 pos += 1;
                 TokenKind::Assign

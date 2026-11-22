@@ -24,6 +24,8 @@ pub enum Instruction {
     Print,
     /// Print an empty line.
     PrintNewline,
+    /// Compare two values of the same type and push a boolean.
+    Equal,
 }
 
 impl fmt::Display for Instruction {
@@ -35,6 +37,7 @@ impl fmt::Display for Instruction {
             Self::PushString(value) => write!(f, "PUSH_STRING {value:?}"),
             Self::StoreLocal(slot) => write!(f, "STORE_LOCAL {slot}"),
             Self::LoadLocal(slot) => write!(f, "LOAD_LOCAL {slot}"),
+            Self::Equal => write!(f, "EQUAL"),
             Self::Print => write!(f, "PRINT"),
             Self::PrintNewline => write!(f, "PRINT_NEWLINE"),
         }

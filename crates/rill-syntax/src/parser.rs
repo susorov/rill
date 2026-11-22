@@ -1,4 +1,4 @@
-use crate::ast::{Expression, ExpressionKind, Program, Statement};
+use crate::ast::{BinaryOperator, Expression, ExpressionKind, Program, Statement};
 use crate::lexer::tokenize;
 use crate::span::Span;
 use crate::token::{Token, TokenKind};
@@ -101,6 +101,29 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expression(&mut self) -> Result<Expression, ParseError> {
+        let left = self.parse_primary()?;
+
+        if self.current().kind != TokenKind::Equal {
+            return Ok(left);
+        }
+
+        self.pos += 1;
+
+        let right = self.parse_primary()?;
+
+        let span = Span::new(left.span.start, right.span.end);
+
+        Ok(Expression {
+            kind: ExpressionKind::Binary {
+                left: Box::new(left),
+                operator: BinaryOperator::Equal,
+                right: Box::new(right),
+            },
+            span,
+        })
+    }
+
+    fn parse_primary(&mut self) -> Result<Expression, ParseError> {
         let token = self.current();
 
         let kind = match token.kind {
@@ -577,5 +600,45 @@ fn rejects_invalid_print_statements() {
             },
             "source: {source:?}"
         );
+    }
+}
+
+#[test]
+fn parses_equality_and_reports_operand_spans() {
+    for source in ["let b = 10 == 10", "print (10==10)"] {
+        let program = parse(source).unwrap();
+        let value = match &program.statements[0] {
+            Statement::Let { value, .. } => value,
+            Statement::Print {
+                value: Some(value), ..
+            } => value,
+            _ => panic!("expected expression"),
+        };
+        let ExpressionKind::Binary {
+            left,
+            operator,
+            right,
+        } = &value.kind
+        else {
+            panic!("expected binary expression");
+        };
+        assert_eq!(*operator, BinaryOperator::Equal);
+        assert_eq!(left.kind, ExpressionKind::Integer(10));
+        assert_eq!(right.kind, ExpressionKind::Integer(10));
+        assert_eq!(&source[left.span.start..left.span.end], "10");
+        assert_eq!(&source[right.span.start..right.span.end], "10");
+        assert_eq!(value.span, Span::new(left.span.start, right.span.end));
+    }
+}
+
+#[test]
+fn rejects_missing_operands_and_chained_equality() {
+    for source in [
+        "let b = == 10",
+        "let b = 10 ==",
+        "print(10 ==)",
+        "let b = 1 == 1 == true",
+    ] {
+        assert!(parse(source).is_err(), "{source}");
     }
 }

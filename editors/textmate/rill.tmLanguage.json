@@ -1,7 +1,9 @@
 {
   "name": "rill",
   "scopeName": "source.rill",
-  "fileTypes": ["rill"],
+  "fileTypes": [
+    "rill"
+  ],
   "patterns": [
     {
       "name": "comment.line.double-slash.rill",
@@ -10,6 +12,10 @@
     {
       "name": "keyword.declaration.rill",
       "match": "\\blet\\b"
+    },
+    {
+      "name": "keyword.operator.comparison.rill",
+      "match": "=="
     },
     {
       "name": "constant.language.boolean.rill",

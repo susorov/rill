@@ -31,4 +31,22 @@ pub enum ExpressionKind {
     Boolean(bool),
     String(String),
     Identifier(String),
+    Binary {
+        left: Box<Expression>,
+        operator: BinaryOperator,
+        right: Box<Expression>,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExpressionType {
+    Integer,
+    Float,
+    Boolean,
+    String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum BinaryOperator {
+    Equal,
 }

@@ -41,7 +41,7 @@ Reserved words: `let`, `int`, `float`, `bool`, `true`, `false`, `print`.
 
 `print()` outputs an empty line.
 
-Values can be literals or previously declared variables.
+Values can be literals, previously declared variables, or equality comparisons.
 
 ## Comments and Strings
 
