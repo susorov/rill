@@ -11,11 +11,7 @@ pub enum TokenKind {
 
     // Values
     Identifier,
-    IntegerLiteral,
-    FloatLiteral,
-    BooleanLiteral,
-    StringLiteral,
-
+    Literal(Literal),
     Operator(Operator),
 
     // Separators
@@ -25,6 +21,14 @@ pub enum TokenKind {
 
     // Special
     Eof,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Literal {
+    Integer,
+    Float,
+    Boolean,
+    String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

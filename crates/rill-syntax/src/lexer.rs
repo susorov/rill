@@ -1,5 +1,5 @@
 use crate::span::Span;
-use crate::token::{Operator, Token, TokenKind};
+use crate::token::{Literal, Operator, Token, TokenKind};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct LexError {
@@ -78,7 +78,7 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
                     match bytes.get(pos) {
                         Some(b'"') => {
                             pos += 1;
-                            break TokenKind::StringLiteral;
+                            break TokenKind::Literal(Literal::String);
                         }
                         Some(b'\n' | b'\r') | None => {
                             return Err(LexError {
@@ -114,9 +114,9 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
                         pos += 1;
                     }
 
-                    TokenKind::FloatLiteral
+                    TokenKind::Literal(Literal::Float)
                 } else {
-                    TokenKind::IntegerLiteral
+                    TokenKind::Literal(Literal::Integer)
                 }
             }
 
@@ -136,7 +136,7 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
                     "bool" => TokenKind::BoolKeyword,
                     "float" => TokenKind::FloatKeyword,
                     "print" => TokenKind::PrintKeyword,
-                    "true" | "false" => TokenKind::BooleanLiteral,
+                    "true" | "false" => TokenKind::Literal(Literal::Boolean),
                     _ => TokenKind::Identifier,
                 }
             }
@@ -177,7 +177,7 @@ mod tests {
                 let source = format!("{literal}{suffix}");
                 let tokens = tokenize(&source).unwrap();
 
-                assert_eq!(tokens[0].kind, TokenKind::FloatLiteral);
+                assert_eq!(tokens[0].kind, TokenKind::Literal(Literal::Float));
                 assert_eq!(tokens[0].span, Span::new(0, literal.len()));
                 if suffix.is_empty() {
                     assert_eq!(tokens.len(), 2);
@@ -218,12 +218,12 @@ mod tests {
                 .map(|token| (token.kind, token.span.clone()))
                 .collect::<Vec<_>>(),
             vec![
-                (TokenKind::IntegerLiteral, Span::new(0, 1)),
-                (TokenKind::IntegerLiteral, Span::new(2, 4)),
-                (TokenKind::IntegerLiteral, Span::new(5, 6)),
-                (TokenKind::IntegerLiteral, Span::new(7, 9)),
-                (TokenKind::IntegerLiteral, Span::new(10, 12)),
-                (TokenKind::IntegerLiteral, Span::new(13, 16)),
+                (TokenKind::Literal(Literal::Integer), Span::new(0, 1)),
+                (TokenKind::Literal(Literal::Integer), Span::new(2, 4)),
+                (TokenKind::Literal(Literal::Integer), Span::new(5, 6)),
+                (TokenKind::Literal(Literal::Integer), Span::new(7, 9)),
+                (TokenKind::Literal(Literal::Integer), Span::new(10, 12)),
+                (TokenKind::Literal(Literal::Integer), Span::new(13, 16)),
                 (TokenKind::Eof, Span::new(16, 16)),
             ]
         );
@@ -236,7 +236,7 @@ mod tests {
             let tokens = tokenize(&source).unwrap();
 
             assert_eq!(tokens.len(), 5);
-            assert_eq!(tokens[3].kind, TokenKind::IntegerLiteral);
+            assert_eq!(tokens[3].kind, TokenKind::Literal(Literal::Integer));
             assert_eq!(tokens[3].span, Span::new(8, source.len()));
             assert_eq!(tokens[4].kind, TokenKind::Eof);
             assert_eq!(tokens[4].span, Span::new(source.len(), source.len()));
@@ -265,7 +265,7 @@ mod tests {
             let tokens = tokenize(&source).unwrap();
 
             assert_eq!(tokens.len(), 2);
-            assert_eq!(tokens[0].kind, TokenKind::StringLiteral);
+            assert_eq!(tokens[0].kind, TokenKind::Literal(Literal::String));
             assert_eq!(tokens[0].span, Span::new(0, source.len()));
             assert_eq!(tokens[1].kind, TokenKind::Eof);
             assert_eq!(tokens[1].span, Span::new(source.len(), source.len()));
@@ -282,7 +282,7 @@ mod tests {
             vec![
                 TokenKind::PrintKeyword,
                 TokenKind::LeftParenthesis,
-                TokenKind::StringLiteral,
+                TokenKind::Literal(Literal::String),
                 TokenKind::RightParenthesis,
                 TokenKind::Newline,
                 TokenKind::PrintKeyword,
@@ -339,7 +339,7 @@ mod tests {
                     TokenKind::LetKeyword,
                     TokenKind::Identifier,
                     TokenKind::Operator(Operator::Assign),
-                    TokenKind::IntegerLiteral,
+                    TokenKind::Literal(Literal::Integer),
                     TokenKind::Eof,
                 ]
             );
@@ -369,9 +369,9 @@ mod tests {
         let tokens = tokenize("true false").unwrap();
 
         assert_eq!(tokens.len(), 3);
-        assert_eq!(tokens[0].kind, TokenKind::BooleanLiteral);
+        assert_eq!(tokens[0].kind, TokenKind::Literal(Literal::Boolean));
         assert_eq!(tokens[0].span, Span::new(0, 4));
-        assert_eq!(tokens[1].kind, TokenKind::BooleanLiteral);
+        assert_eq!(tokens[1].kind, TokenKind::Literal(Literal::Boolean));
         assert_eq!(tokens[1].span, Span::new(5, 10));
         assert_eq!(tokens[2].kind, TokenKind::Eof);
     }
@@ -428,7 +428,7 @@ mod tests {
                 TokenKind::LetKeyword,
                 TokenKind::Identifier,
                 TokenKind::Operator(Operator::Assign),
-                TokenKind::IntegerLiteral,
+                TokenKind::Literal(Literal::Integer),
                 TokenKind::Newline,
                 TokenKind::Eof,
             ]
@@ -479,7 +479,7 @@ mod tests {
         let tokens = tokenize("let x = 42 \t ").unwrap();
 
         assert_eq!(tokens.len(), 5);
-        assert_eq!(tokens[3].kind, TokenKind::IntegerLiteral);
+        assert_eq!(tokens[3].kind, TokenKind::Literal(Literal::Integer));
         assert_eq!(tokens[3].span, Span::new(8, 10));
         assert_eq!(tokens[4].kind, TokenKind::Eof);
         assert_eq!(tokens[4].span, Span::new(13, 13));
