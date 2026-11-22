@@ -32,6 +32,9 @@ fn all_examples_run_successfully() {
             );
 
             let expected = match path.file_name().unwrap().to_str().unwrap() {
+                "greater_than_or_equal.rill" => {
+                    "true\ntrue\nfalse\nfalse\ntrue\nfalse\ntrue\ntrue\n"
+                }
                 "inequality.rill" => "true\nfalse\ntrue\nfalse\ntrue\nfalse\ntrue\nfalse\n",
                 "equality.rill" => "true\ntrue\nfalse\ntrue\ntrue\ntrue\n",
                 "floats.rill" => "19.95\n-4.5\n0\n42\n",

@@ -41,7 +41,7 @@ Reserved words: `let`, `int`, `float`, `bool`, `true`, `false`, `print`.
 
 `print()` outputs an empty line.
 
-Values can be literals, previously declared variables, or equality comparisons.
+Values can be literals, previously declared variables, or comparisons.
 
 ## Comments and Strings
 
@@ -57,7 +57,12 @@ Strings use double quotes. They cannot contain double quotes or newlines. Backsl
 Both return a boolean and require operands of the same type. Mixed types,
 including integers versus floats, are compile time errors. Strings compare by
 content; floats use exact numeric equality, so `0.0 != -0.0` is false.
-Comparisons cannot be chained.
+`>=` tests whether the left number is greater than or equal to the right:
+`print(10 >= 5)`. Both operands must be integers or both must be floats.
+The result is a boolean. Strings, booleans, and mixed numeric types are rejected
+at compile time. `0.0 >= -0.0` is true.
+
+Comparisons cannot be chained. Bare `>` is not supported.
 
 ## Limitations
 

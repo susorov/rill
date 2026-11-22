@@ -9,7 +9,7 @@ Source -> Tokens -> Syntax tree -> Bytecode -> Execution
 
 - **rill-syntax** turns source text into tokens and parses them into a syntax tree.
   Source spans record byte offsets for diagnostics.
-- **rill-compiler** resolves variable names to typed local slots, checks equality operand types, and translates the
+- **rill-compiler** resolves variable names to typed local slots, checks comparison operand types, and translates the
   syntax tree into bytecode.
 - **rill-vm** defines the bytecode instructions and runtime values. It executes
   instructions in order using an operand stack and local slots.

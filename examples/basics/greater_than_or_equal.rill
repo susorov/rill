@@ -1,0 +1,11 @@
+let value = 10
+let copy = value
+print(copy >= 5)
+print(value >= 10)
+print(value >= 20)
+print(-2 >= -1)
+print(2.5 >= 1.5)
+print(1.5 >= 2.5)
+print(0.0 >= -0.0)
+let result = value >= 10
+print(result == true)

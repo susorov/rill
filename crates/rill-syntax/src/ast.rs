@@ -50,4 +50,5 @@ pub enum ExpressionType {
 pub enum BinaryOperator {
     Equal,
     NotEqual,
+    GreaterThanOrEqual,
 }

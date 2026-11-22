@@ -33,6 +33,7 @@ pub enum Operator {
     Assign,
     Equal,
     NotEqual,
+    GreaterThanOrEqual,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

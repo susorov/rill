@@ -66,6 +66,11 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
                 TokenKind::Operator(Operator::NotEqual)
             }
 
+            b'>' if bytes.get(pos + 1) == Some(&b'=') => {
+                pos += 2;
+                TokenKind::Operator(Operator::GreaterThanOrEqual)
+            }
+
             b'=' => {
                 pos += 1;
                 TokenKind::Operator(Operator::Assign)
@@ -169,6 +174,22 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tokenizes_greater_than_or_equal_and_rejects_bare_greater_than() {
+        let tokens = tokenize("1>=2").unwrap();
+        assert_eq!(
+            tokens[1].kind,
+            TokenKind::Operator(Operator::GreaterThanOrEqual)
+        );
+        assert_eq!(tokens[1].span, Span::new(1, 3));
+        for source in [">", "1 > 2", "1 > = 2"] {
+            let error = tokenize(source).unwrap_err();
+            let start = source.find('>').unwrap();
+            assert_eq!(error.message, "unexpected character '>'");
+            assert_eq!(error.span, Span::new(start, start + 1));
+        }
+    }
 
     #[test]
     fn tokenizes_float_literals_with_spans() {

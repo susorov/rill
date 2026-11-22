@@ -15,7 +15,7 @@
     },
     {
       "name": "keyword.operator.comparison.rill",
-      "match": "==|!="
+      "match": "==|!=|>="
     },
     {
       "name": "constant.language.boolean.rill",

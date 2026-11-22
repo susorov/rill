@@ -104,6 +104,7 @@ impl Compiler {
                 let instruction = match operator {
                     BinaryOperator::Equal => Instruction::Equal,
                     BinaryOperator::NotEqual => Instruction::NotEqual,
+                    BinaryOperator::GreaterThanOrEqual => Instruction::GreaterThanOrEqual,
                 };
                 let left_type = self.compile_expression(left)?;
                 let right_type = self.compile_expression(right)?;
@@ -112,6 +113,14 @@ impl Compiler {
                         message: format!(
                             "cannot compare {left_type:?} with {right_type:?}: operands must have the same type"
                         ),
+                        span: expression.span.clone(),
+                    });
+                }
+                if *operator == BinaryOperator::GreaterThanOrEqual
+                    && !matches!(left_type, ExpressionType::Integer | ExpressionType::Float)
+                {
+                    return Err(CompileError {
+                        message: "'>=' requires integer or float operands".to_owned(),
                         span: expression.span.clone(),
                     });
                 }
@@ -129,6 +138,56 @@ mod tests {
     use super::*;
     use Instruction::{LoadLocal, PushBoolean, PushFloat, PushInteger, PushString, StoreLocal};
     use rill_syntax::parser::parse;
+
+    #[test]
+    fn compiles_numeric_ordering_and_infers_boolean_result() {
+        let code = compile(
+            &parse("let a = 10\nlet copy = a\nlet result = copy >= 5\nprint(result == true)")
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            code.instructions,
+            vec![
+                PushInteger(10),
+                StoreLocal(0),
+                LoadLocal(0),
+                StoreLocal(1),
+                LoadLocal(1),
+                PushInteger(5),
+                Instruction::GreaterThanOrEqual,
+                StoreLocal(2),
+                LoadLocal(2),
+                PushBoolean(true),
+                Instruction::Equal,
+                Instruction::Print,
+            ]
+        );
+        assert!(compile(&parse("print(1.5 >= 2.5)").unwrap()).is_ok());
+    }
+
+    #[test]
+    fn rejects_invalid_ordering_operands_at_compile_time() {
+        for expression in [
+            "true >= false",
+            "\"a\" >= \"b\"",
+            "1 >= 1.0",
+            "1.0 >= 1",
+            "1 >= true",
+        ] {
+            let source = format!("print({expression})");
+            let error = compile(&parse(&source).unwrap()).unwrap_err();
+            assert_eq!(error.span, Span::new(6, 6 + expression.len()));
+        }
+        for source in [
+            "let a = true\nlet copy = a\nprint(copy >= false)",
+            "let a = \"a\"\nprint(a >= \"b\")",
+            "let a = 1 >= 2\nprint(a >= false)",
+        ] {
+            let error = compile(&parse(source).unwrap()).unwrap_err();
+            assert_eq!(error.message, "'>=' requires integer or float operands");
+        }
+    }
 
     #[test]
     fn infers_equality_types_through_variable_copies() {
