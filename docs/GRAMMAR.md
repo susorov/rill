@@ -62,7 +62,11 @@ content; floats use exact numeric equality, so `0.0 != -0.0` is false.
 The result is a boolean. Strings, booleans, and mixed numeric types are rejected
 at compile time. `0.0 >= -0.0` is true.
 
-Comparisons cannot be chained. Bare `>` is not supported.
+`<=` tests whether the left number is less than or equal to the right:
+`print(5 <= 10)`. It uses the same numeric type rules as `>=` and returns a
+boolean. `0.0 <= -0.0` is true.
+
+Comparisons cannot be chained. Bare `>` and `<` are not supported.
 
 ## Limitations
 

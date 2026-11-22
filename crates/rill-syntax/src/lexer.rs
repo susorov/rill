@@ -71,6 +71,11 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
                 TokenKind::Operator(Operator::GreaterThanOrEqual)
             }
 
+            b'<' if bytes.get(pos + 1) == Some(&b'=') => {
+                pos += 2;
+                TokenKind::Operator(Operator::LessThanOrEqual)
+            }
+
             b'=' => {
                 pos += 1;
                 TokenKind::Operator(Operator::Assign)
@@ -187,6 +192,22 @@ mod tests {
             let error = tokenize(source).unwrap_err();
             let start = source.find('>').unwrap();
             assert_eq!(error.message, "unexpected character '>'");
+            assert_eq!(error.span, Span::new(start, start + 1));
+        }
+    }
+
+    #[test]
+    fn tokenizes_less_than_or_equal_and_rejects_bare_less_than() {
+        let tokens = tokenize("1<=2").unwrap();
+        assert_eq!(
+            tokens[1].kind,
+            TokenKind::Operator(Operator::LessThanOrEqual)
+        );
+        assert_eq!(tokens[1].span, Span::new(1, 3));
+        for source in ["<", "1 < 2", "1 < = 2"] {
+            let error = tokenize(source).unwrap_err();
+            let start = source.find('<').unwrap();
+            assert_eq!(error.message, "unexpected character '<'");
             assert_eq!(error.span, Span::new(start, start + 1));
         }
     }

@@ -5,7 +5,7 @@ The virtual machine executes instructions in order and uses a stack to pass
 values between them.
 
 Save this program as `example.rill` and run `rill --bytecode example.rill`.
-The compiler emits 11 instructions that use eight of the eleven opcodes.
+The compiler emits 11 instructions that use eight of the twelve opcodes.
 
 ```rill
 let count = 42
@@ -49,3 +49,7 @@ stack checks as `EQUAL`, but pushes the inverse boolean result.
 left operand is greater than or equal to the right. The compiler rejects
 non-numeric or mixed-type operands. The VM checks these types and stack depth
 as well; errors leave the operands and instruction pointer unchanged.
+
+`LESS_THAN_OR_EQUAL` consumes two same-type numbers and pushes whether the left
+operand is less than or equal to the right. It applies the same compile-time
+and VM checks as `GREATER_THAN_OR_EQUAL`.

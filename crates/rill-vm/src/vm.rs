@@ -82,6 +82,11 @@ impl<'a> Vm<'a> {
                         Ok(Value::Boolean(greater_than_or_equal(left, right)?))
                     })?;
                 }
+                Instruction::LessThanOrEqual => {
+                    self.binary(|left, right| {
+                        Ok(Value::Boolean(less_than_or_equal(left, right)?))
+                    })?;
+                }
                 Instruction::Print => {
                     let value = self.stack.pop().ok_or(VmError::StackUnderflow)?;
 
@@ -148,6 +153,14 @@ fn greater_than_or_equal(left: &Value, right: &Value) -> Result<bool, VmError> {
     }
 }
 
+fn less_than_or_equal(left: &Value, right: &Value) -> Result<bool, VmError> {
+    match (left, right) {
+        (Value::Integer(a), Value::Integer(b)) => Ok(a <= b),
+        (Value::Float(a), Value::Float(b)) => Ok(a <= b),
+        _ => Err(VmError::TypeMismatch),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -182,6 +195,34 @@ mod tests {
     }
 
     #[test]
+    fn less_than_or_equal_compares_numbers_in_operand_order() {
+        for (left, right, expected) in [
+            (PushInteger(2), PushInteger(1), true),
+            (PushInteger(1), PushInteger(1), true),
+            (PushInteger(1), PushInteger(2), false),
+            (PushInteger(-2), PushInteger(-1), false),
+            (PushInteger(i64::MAX), PushInteger(i64::MIN), true),
+            (PushFloat(2.5), PushFloat(1.5), true),
+            (PushFloat(1.5), PushFloat(2.5), false),
+            (PushFloat(1.5), PushFloat(1.5), true),
+            (PushFloat(0.0), PushFloat(-0.0), true),
+            (PushFloat(f64::NAN), PushFloat(1.0), false),
+        ] {
+            let code = Bytecode {
+                instructions: vec![right, left, Instruction::LessThanOrEqual],
+                local_count: 0,
+            };
+            let mut vm = Vm::new(&code);
+            vm.run().unwrap();
+            assert_eq!(vm.stack, vec![Value::Boolean(expected)]);
+        }
+        assert_eq!(
+            Instruction::LessThanOrEqual.to_string(),
+            "LESS_THAN_OR_EQUAL"
+        );
+    }
+
+    #[test]
     fn ordering_errors_preserve_operands_and_instruction_pointer() {
         for (operands, expected) in [
             (vec![], VmError::StackUnderflow),
@@ -205,6 +246,41 @@ mod tests {
             baseline.run().unwrap();
             let mut instructions = operands;
             instructions.push(Instruction::GreaterThanOrEqual);
+            let code = Bytecode {
+                instructions,
+                local_count: 0,
+            };
+            let mut vm = Vm::new(&code);
+            assert_eq!(vm.run(), Err(expected));
+            assert_eq!(vm.stack, baseline.stack);
+            assert_eq!(vm.instruction_pointer, baseline.instruction_pointer);
+        }
+    }
+
+    #[test]
+    fn less_than_or_equal_errors_preserve_operands_and_instruction_pointer() {
+        for (operands, expected) in [
+            (vec![], VmError::StackUnderflow),
+            (vec![PushInteger(1)], VmError::StackUnderflow),
+            (vec![PushInteger(1), PushFloat(1.0)], VmError::TypeMismatch),
+            (vec![PushFloat(1.0), PushInteger(1)], VmError::TypeMismatch),
+            (
+                vec![PushBoolean(true), PushBoolean(false)],
+                VmError::TypeMismatch,
+            ),
+            (
+                vec![PushString("a".into()), PushString("b".into())],
+                VmError::TypeMismatch,
+            ),
+        ] {
+            let valid = Bytecode {
+                instructions: operands.clone(),
+                local_count: 0,
+            };
+            let mut baseline = Vm::new(&valid);
+            baseline.run().unwrap();
+            let mut instructions = operands;
+            instructions.push(Instruction::LessThanOrEqual);
             let code = Bytecode {
                 instructions,
                 local_count: 0,
