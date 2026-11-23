@@ -111,16 +111,22 @@ impl Compiler {
                 };
                 let left_type = self.compile_expression(left)?;
                 let right_type = self.compile_expression(right)?;
-                if left_type != right_type {
+
+                let is_numeric = [left_type, right_type].iter().all(|operand_type| {
+                    matches!(
+                        operand_type,
+                        ExpressionType::Integer | ExpressionType::Float
+                    )
+                });
+
+                if left_type != right_type && !is_numeric {
                     return Err(CompileError {
                         message: format!(
-                            "cannot compare {left_type:?} with {right_type:?}: operands must have the same type"
+                            "cannot compare {left_type:?} with {right_type:?}: operands must have the same type or both be numeric"
                         ),
                         span: expression.span.clone(),
                     });
                 }
-                let is_numeric =
-                    matches!(left_type, ExpressionType::Integer | ExpressionType::Float);
 
                 if *operator == BinaryOperator::LessThan && !is_numeric {
                     return Err(CompileError {
@@ -273,14 +279,54 @@ mod tests {
     }
 
     #[test]
-    fn rejects_invalid_less_than_operands_at_compile_time() {
-        for expression in [
-            "true < false",
-            "\"a\" < \"b\"",
-            "1 < 1.0",
-            "1.0 < 1",
-            "1 < true",
+    fn compiles_mixed_numeric_comparisons() {
+        for (operator, instruction) in [
+            ("==", Instruction::Equal),
+            ("!=", Instruction::NotEqual),
+            ("<", Instruction::LessThan),
+            (">", Instruction::GreaterThan),
+            ("<=", Instruction::LessThanOrEqual),
+            (">=", Instruction::GreaterThanOrEqual),
         ] {
+            for (left, right, operands) in [
+                ("1", "1.5", vec![PushInteger(1), PushFloat(1.5)]),
+                ("1.5", "1", vec![PushFloat(1.5), PushInteger(1)]),
+            ] {
+                let source = format!("print({left} {operator} {right})");
+                let code = compile(&parse(&source).unwrap()).unwrap();
+                let mut expected = operands;
+                expected.extend([instruction.clone(), Instruction::Print]);
+                assert_eq!(code.instructions, expected, "{source}");
+
+                let source = format!(
+                    "let a = {left}\nlet copy = a\nlet b = {right}\nlet result = copy {operator} b\nprint(result == true)"
+                );
+                let code = compile(&parse(&source).unwrap()).unwrap();
+                assert!(code.instructions.contains(&instruction), "{source}");
+            }
+        }
+    }
+
+    #[test]
+    fn rejects_numeric_and_nonnumeric_comparisons_in_both_orders() {
+        for operator in ["==", "!=", "<", ">", "<=", ">="] {
+            for number in ["1", "1.0"] {
+                for other in ["true", "\"1\""] {
+                    for (left, right) in [(number, other), (other, number)] {
+                        let expression = format!("{left} {operator} {right}");
+                        let source = format!("print({expression})");
+                        let error = compile(&parse(&source).unwrap()).unwrap_err();
+                        assert_eq!(error.span, Span::new(6, 6 + expression.len()));
+                        assert!(error.message.contains("same type or both be numeric"));
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn rejects_invalid_less_than_operands_at_compile_time() {
+        for expression in ["true < false", "\"a\" < \"b\"", "1 < true"] {
             let source = format!("print({expression})");
             let error = compile(&parse(&source).unwrap()).unwrap_err();
             assert_eq!(error.span, Span::new(6, 6 + expression.len()));
@@ -297,13 +343,7 @@ mod tests {
 
     #[test]
     fn rejects_invalid_greater_than_operands_at_compile_time() {
-        for expression in [
-            "true > false",
-            "\"a\" > \"b\"",
-            "1 > 1.0",
-            "1.0 > 1",
-            "1 > true",
-        ] {
+        for expression in ["true > false", "\"a\" > \"b\"", "1 > true"] {
             let source = format!("print({expression})");
             let error = compile(&parse(&source).unwrap()).unwrap_err();
             assert_eq!(error.span, Span::new(6, 6 + expression.len()));
@@ -320,13 +360,7 @@ mod tests {
 
     #[test]
     fn rejects_invalid_ordering_operands_at_compile_time() {
-        for expression in [
-            "true >= false",
-            "\"a\" >= \"b\"",
-            "1 >= 1.0",
-            "1.0 >= 1",
-            "1 >= true",
-        ] {
+        for expression in ["true >= false", "\"a\" >= \"b\"", "1 >= true"] {
             let source = format!("print({expression})");
             let error = compile(&parse(&source).unwrap()).unwrap_err();
             assert_eq!(error.span, Span::new(6, 6 + expression.len()));
@@ -343,13 +377,7 @@ mod tests {
 
     #[test]
     fn rejects_invalid_ordering_operands_at_compile_time_less_than_or_equal() {
-        for expression in [
-            "true <= false",
-            "\"a\" <= \"b\"",
-            "1 <= 1.0",
-            "1.0 <= 1",
-            "1 <= true",
-        ] {
+        for expression in ["true <= false", "\"a\" <= \"b\"", "1 <= true"] {
             let source = format!("print({expression})");
             let error = compile(&parse(&source).unwrap()).unwrap_err();
             assert_eq!(error.span, Span::new(6, 6 + expression.len()));
@@ -383,7 +411,6 @@ print(c == true)";
         for source in [
             "let a = 10
 print(a == true)",
-            "print(10 == 10.0)",
             "let b = 1 == 1
 print(b == 1)",
         ] {
@@ -648,8 +675,6 @@ print(b != false)",
     );
     for source in [
         "print(10 != true)",
-        "let a = 10
-print(a != 10.0)",
         "let b = 1 != 2
 print(b != 1)",
     ] {

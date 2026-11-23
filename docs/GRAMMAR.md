@@ -54,12 +54,12 @@ Strings use double quotes. They cannot contain double quotes or newlines. Backsl
 ## Comparisons
 
 `==` tests equality and `!=` tests inequality: `let b = 10 != 20`.
-Both return a boolean and require operands of the same type. Mixed types,
-including integers versus floats, are compile time errors. Strings compare by
+Both return a boolean and require operands of the same type or two numeric
+operands (integers or floats). Other mixed types are compile time errors. Strings compare by
 content; floats use exact numeric equality, so `0.0 != -0.0` is false.
 `>=` tests whether the left number is greater than or equal to the right:
-`print(10 >= 5)`. Both operands must be integers or both must be floats.
-The result is a boolean. Strings, booleans, and mixed numeric types are rejected
+`print(10 >= 5)`. Each operand must be an integer or a float.
+The result is a boolean. Strings and booleans are rejected
 at compile time. `0.0 >= -0.0` is true.
 
 `<=` tests whether the left number is less than or equal to the right:
@@ -73,6 +73,12 @@ boolean. Equal values return false, including `0.0 > -0.0`.
 `<` tests whether the left number is strictly less than the right:
 `print(5 < 10)`. It uses the same numeric type rules as `>` and returns a
 boolean. Equal values return false, including `0.0 < -0.0`.
+
+For all six comparison operators, comparing an integer with a float promotes
+the integer to `f64`: `1 == 1.0` and `1 < 1.5` are true. This conversion can
+round integers outside the exact range from `-2^53` to `2^53`; for example,
+`9007199254740993 == 9007199254740992.0` is true. Comparing two integers retains
+full `i64` precision. Promotion does not change the types or values of variables.
 
 Comparisons cannot be chained.
 

@@ -145,6 +145,8 @@ fn equal(left: &Value, right: &Value) -> Result<bool, VmError> {
     match (left, right) {
         (Value::Integer(a), Value::Integer(b)) => Ok(a == b),
         (Value::Float(a), Value::Float(b)) => Ok(a == b),
+        (Value::Float(a), Value::Integer(b)) => Ok(*a == *b as f64),
+        (Value::Integer(a), Value::Float(b)) => Ok((*a as f64) == *b),
         (Value::Boolean(a), Value::Boolean(b)) => Ok(a == b),
         (Value::String(a), Value::String(b)) => Ok(a == b),
         _ => Err(VmError::TypeMismatch),
@@ -155,6 +157,8 @@ fn less_than(left: &Value, right: &Value) -> Result<bool, VmError> {
     match (left, right) {
         (Value::Integer(a), Value::Integer(b)) => Ok(a < b),
         (Value::Float(a), Value::Float(b)) => Ok(a < b),
+        (Value::Float(a), Value::Integer(b)) => Ok(*a < *b as f64),
+        (Value::Integer(a), Value::Float(b)) => Ok((*a as f64) < *b),
         _ => Err(VmError::TypeMismatch),
     }
 }
@@ -163,6 +167,8 @@ fn greater_than(left: &Value, right: &Value) -> Result<bool, VmError> {
     match (left, right) {
         (Value::Integer(a), Value::Integer(b)) => Ok(a > b),
         (Value::Float(a), Value::Float(b)) => Ok(a > b),
+        (Value::Float(a), Value::Integer(b)) => Ok(*a > *b as f64),
+        (Value::Integer(a), Value::Float(b)) => Ok((*a as f64) > *b),
         _ => Err(VmError::TypeMismatch),
     }
 }
@@ -171,6 +177,8 @@ fn greater_than_or_equal(left: &Value, right: &Value) -> Result<bool, VmError> {
     match (left, right) {
         (Value::Integer(a), Value::Integer(b)) => Ok(a >= b),
         (Value::Float(a), Value::Float(b)) => Ok(a >= b),
+        (Value::Float(a), Value::Integer(b)) => Ok(*a >= *b as f64),
+        (Value::Integer(a), Value::Float(b)) => Ok((*a as f64) >= *b),
         _ => Err(VmError::TypeMismatch),
     }
 }
@@ -179,6 +187,8 @@ fn less_than_or_equal(left: &Value, right: &Value) -> Result<bool, VmError> {
     match (left, right) {
         (Value::Integer(a), Value::Integer(b)) => Ok(a <= b),
         (Value::Float(a), Value::Float(b)) => Ok(a <= b),
+        (Value::Float(a), Value::Integer(b)) => Ok(*a <= *b as f64),
+        (Value::Integer(a), Value::Float(b)) => Ok((*a as f64) <= *b),
         _ => Err(VmError::TypeMismatch),
     }
 }
@@ -187,6 +197,79 @@ fn less_than_or_equal(left: &Value, right: &Value) -> Result<bool, VmError> {
 mod tests {
     use super::*;
     use Instruction::{LoadLocal, PushBoolean, PushFloat, PushInteger, PushString, StoreLocal};
+
+    #[test]
+    fn mixed_numeric_comparisons_promote_integers_to_floats() {
+        // Expected results are ordered as ==, !=, <, >, <=, >=.
+        let equal = [true, false, false, false, true, true];
+        let less = [false, true, true, false, true, false];
+        let greater = [false, true, false, true, false, true];
+        let unordered = [false, true, false, false, false, false];
+        for (left, right, expected) in [
+            (PushInteger(1), PushFloat(1.0), equal),
+            (PushFloat(1.0), PushInteger(1), equal),
+            (PushInteger(1), PushFloat(1.5), less),
+            (PushFloat(1.5), PushInteger(1), greater),
+            (PushInteger(2), PushFloat(1.5), greater),
+            (PushFloat(1.5), PushInteger(2), less),
+            (PushInteger(-2), PushFloat(-1.5), less),
+            (PushFloat(-1.5), PushInteger(-2), greater),
+            (PushInteger(0), PushFloat(-0.0), equal),
+            (PushFloat(-0.0), PushInteger(0), equal),
+            (PushInteger(1), PushFloat(f64::NAN), unordered),
+            (PushFloat(f64::NAN), PushInteger(1), unordered),
+            (PushInteger(i64::MAX), PushFloat(f64::INFINITY), less),
+            (PushFloat(f64::NEG_INFINITY), PushInteger(i64::MIN), less),
+            // Promotion rounds integers that f64 cannot represent exactly.
+            (
+                PushInteger(9_007_199_254_740_993),
+                PushFloat(9_007_199_254_740_992.0),
+                equal,
+            ),
+            (
+                PushFloat(9_007_199_254_740_992.0),
+                PushInteger(9_007_199_254_740_993),
+                equal,
+            ),
+            (
+                PushInteger(i64::MAX),
+                PushFloat(9_223_372_036_854_775_808.0),
+                equal,
+            ),
+            (
+                PushFloat(-9_223_372_036_854_775_808.0),
+                PushInteger(i64::MIN),
+                equal,
+            ),
+            // Integer-only comparisons must retain all 64 bits of precision.
+            (
+                PushInteger(9_007_199_254_740_993),
+                PushInteger(9_007_199_254_740_992),
+                greater,
+            ),
+            (PushInteger(i64::MAX - 1), PushInteger(i64::MAX), less),
+        ] {
+            for (instruction, expected) in [
+                Instruction::Equal,
+                Instruction::NotEqual,
+                Instruction::LessThan,
+                Instruction::GreaterThan,
+                Instruction::LessThanOrEqual,
+                Instruction::GreaterThanOrEqual,
+            ]
+            .into_iter()
+            .zip(expected)
+            {
+                let code = Bytecode {
+                    instructions: vec![left.clone(), right.clone(), instruction],
+                    local_count: 0,
+                };
+                let mut vm = Vm::new(&code);
+                vm.run().unwrap();
+                assert_eq!(vm.stack, vec![Value::Boolean(expected)], "{code:?}");
+            }
+        }
+    }
 
     #[test]
     fn less_than_compares_numbers_in_operand_order() {
@@ -299,8 +382,14 @@ mod tests {
         for (operands, expected) in [
             (vec![], VmError::StackUnderflow),
             (vec![PushInteger(1)], VmError::StackUnderflow),
-            (vec![PushInteger(1), PushFloat(1.0)], VmError::TypeMismatch),
-            (vec![PushFloat(1.0), PushInteger(1)], VmError::TypeMismatch),
+            (
+                vec![PushInteger(1), PushBoolean(true)],
+                VmError::TypeMismatch,
+            ),
+            (
+                vec![PushBoolean(true), PushFloat(1.0)],
+                VmError::TypeMismatch,
+            ),
             (
                 vec![PushBoolean(true), PushBoolean(false)],
                 VmError::TypeMismatch,
@@ -334,8 +423,14 @@ mod tests {
         for (operands, expected) in [
             (vec![], VmError::StackUnderflow),
             (vec![PushInteger(1)], VmError::StackUnderflow),
-            (vec![PushInteger(1), PushFloat(1.0)], VmError::TypeMismatch),
-            (vec![PushFloat(1.0), PushInteger(1)], VmError::TypeMismatch),
+            (
+                vec![PushInteger(1), PushBoolean(true)],
+                VmError::TypeMismatch,
+            ),
+            (
+                vec![PushBoolean(true), PushFloat(1.0)],
+                VmError::TypeMismatch,
+            ),
             (
                 vec![PushBoolean(true), PushBoolean(false)],
                 VmError::TypeMismatch,
@@ -369,8 +464,14 @@ mod tests {
         for (operands, expected) in [
             (vec![], VmError::StackUnderflow),
             (vec![PushInteger(1)], VmError::StackUnderflow),
-            (vec![PushInteger(1), PushFloat(1.0)], VmError::TypeMismatch),
-            (vec![PushFloat(1.0), PushInteger(1)], VmError::TypeMismatch),
+            (
+                vec![PushInteger(1), PushBoolean(true)],
+                VmError::TypeMismatch,
+            ),
+            (
+                vec![PushBoolean(true), PushFloat(1.0)],
+                VmError::TypeMismatch,
+            ),
             (
                 vec![PushBoolean(true), PushBoolean(false)],
                 VmError::TypeMismatch,
@@ -404,8 +505,14 @@ mod tests {
         for (operands, expected) in [
             (vec![], VmError::StackUnderflow),
             (vec![PushInteger(1)], VmError::StackUnderflow),
-            (vec![PushInteger(1), PushFloat(1.0)], VmError::TypeMismatch),
-            (vec![PushFloat(1.0), PushInteger(1)], VmError::TypeMismatch),
+            (
+                vec![PushInteger(1), PushBoolean(true)],
+                VmError::TypeMismatch,
+            ),
+            (
+                vec![PushBoolean(true), PushFloat(1.0)],
+                VmError::TypeMismatch,
+            ),
             (
                 vec![PushBoolean(true), PushBoolean(false)],
                 VmError::TypeMismatch,

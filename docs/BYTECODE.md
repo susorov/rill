@@ -23,9 +23,13 @@ starting at zero.
 | `PRINT` | `[value] → []` | Print the value followed by a newline. |
 | `PRINT_NEWLINE` | `[] → []` | Print an empty line. |
 
-Equality accepts any two values of the same type. Ordering requires two integers
-or two floats. Mixed types are rejected at compile time and checked by the VM.
-Strings compare by content; floats use exact numeric comparisons.
+Equality accepts any two values of the same type or two numeric values. Ordering
+requires two numeric values. When one operand is an integer and the other is a
+float, the VM converts the integer to `f64` before comparing. This may round
+large integers; integer-only comparisons retain full `i64` precision. Other
+mixed types are rejected at compile time and checked by the VM. Strings compare
+by content; floats use exact numeric comparisons. With NaN, `!=` returns true
+and the other comparison operators return false.
 
 The VM reports invalid or uninitialized local slots, insufficient stack operands,
 and invalid comparison types. These errors preserve the failing instruction's

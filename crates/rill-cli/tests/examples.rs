@@ -32,6 +32,10 @@ fn all_examples_run_successfully() {
             );
 
             let expected = match path.file_name().unwrap().to_str().unwrap() {
+                "mixed_numeric_comparisons.rill" => concat!(
+                    "true\ntrue\ntrue\ntrue\ntrue\nfalse\nfalse\ntrue\n",
+                    "true\ntrue\ntrue\ntrue\ntrue\nfalse\n",
+                ),
                 "less_than_or_equal.rill" => "false\ntrue\ntrue\ntrue\nfalse\ntrue\ntrue\ntrue\n",
                 "less_than.rill" => "false\nfalse\ntrue\ntrue\nfalse\ntrue\nfalse\nfalse\n",
                 "greater_than.rill" => "true\nfalse\nfalse\nfalse\ntrue\nfalse\nfalse\nfalse\n",

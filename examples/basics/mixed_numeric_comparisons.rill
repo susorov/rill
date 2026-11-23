@@ -1,0 +1,16 @@
+let integer = 2
+let fraction = 2.5
+print(integer == 2.0)
+print(2.0 == integer)
+print(integer != fraction)
+print(fraction != integer)
+print(integer < fraction)
+print(fraction < integer)
+print(integer > fraction)
+print(fraction > integer)
+print(integer <= 2.0)
+print(2.0 <= integer)
+print(integer >= 2.0)
+print(2.0 >= integer)
+print(9007199254740993 == 9007199254740992.0)
+print(9007199254740993 == 9007199254740992)
