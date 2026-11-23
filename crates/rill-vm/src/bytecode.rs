@@ -29,6 +29,8 @@ pub enum Instruction {
     /// Compare two same-type values for inequality.
     NotEqual,
     /// Compare two same-type numbers, with the left operand below the right on the stack.
+    GreaterThan,
+    /// Compare two same-type numbers, with the left operand below the right on the stack.
     GreaterThanOrEqual,
     /// Compare two same-type numbers, with the left operand below the right on the stack.
     LessThanOrEqual,
@@ -45,6 +47,7 @@ impl fmt::Display for Instruction {
             Self::LoadLocal(slot) => write!(f, "LOAD_LOCAL {slot}"),
             Self::NotEqual => write!(f, "NOT_EQUAL"),
             Self::Equal => write!(f, "EQUAL"),
+            Self::GreaterThan => write!(f, "GREATER_THAN"),
             Self::GreaterThanOrEqual => write!(f, "GREATER_THAN_OR_EQUAL"),
             Self::LessThanOrEqual => write!(f, "LESS_THAN_OR_EQUAL"),
             Self::Print => write!(f, "PRINT"),

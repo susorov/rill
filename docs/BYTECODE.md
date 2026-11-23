@@ -16,6 +16,7 @@ starting at zero.
 | `LOAD_LOCAL slot` | `[] → [value]` | Push a copy of a local slot's value. |
 | `EQUAL` | `[left, right] → [bool]` | Compare `left == right`. |
 | `NOT_EQUAL` | `[left, right] → [bool]` | Compare `left != right`. |
+| `GREATER_THAN` | `[left, right] → [bool]` | Compare `left > right`. |
 | `GREATER_THAN_OR_EQUAL` | `[left, right] → [bool]` | Compare `left >= right`. |
 | `LESS_THAN_OR_EQUAL` | `[left, right] → [bool]` | Compare `left <= right`. |
 | `PRINT` | `[value] → []` | Print the value followed by a newline. |

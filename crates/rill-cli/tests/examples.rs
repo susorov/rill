@@ -33,6 +33,7 @@ fn all_examples_run_successfully() {
 
             let expected = match path.file_name().unwrap().to_str().unwrap() {
                 "less_than_or_equal.rill" => "false\ntrue\ntrue\ntrue\nfalse\ntrue\ntrue\ntrue\n",
+                "greater_than.rill" => "true\nfalse\nfalse\nfalse\ntrue\nfalse\nfalse\nfalse\n",
                 "greater_than_or_equal.rill" => {
                     "true\ntrue\nfalse\nfalse\ntrue\nfalse\ntrue\ntrue\n"
                 }

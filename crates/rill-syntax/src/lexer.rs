@@ -71,6 +71,11 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
                 TokenKind::Operator(Operator::GreaterThanOrEqual)
             }
 
+            b'>' => {
+                pos += 1;
+                TokenKind::Operator(Operator::GreaterThan)
+            }
+
             b'<' if bytes.get(pos + 1) == Some(&b'=') => {
                 pos += 2;
                 TokenKind::Operator(Operator::LessThanOrEqual)
@@ -181,18 +186,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn tokenizes_greater_than_or_equal_and_rejects_bare_greater_than() {
-        let tokens = tokenize("1>=2").unwrap();
-        assert_eq!(
-            tokens[1].kind,
-            TokenKind::Operator(Operator::GreaterThanOrEqual)
-        );
-        assert_eq!(tokens[1].span, Span::new(1, 3));
-        for source in [">", "1 > 2", "1 > = 2"] {
-            let error = tokenize(source).unwrap_err();
-            let start = source.find('>').unwrap();
-            assert_eq!(error.message, "unexpected character '>'");
-            assert_eq!(error.span, Span::new(start, start + 1));
+    fn tokenizes_greater_than_and_greater_than_or_equal() {
+        for (source, operator, end) in [
+            ("1>2", Operator::GreaterThan, 2),
+            ("1>=2", Operator::GreaterThanOrEqual, 3),
+            ("1> =2", Operator::GreaterThan, 2),
+        ] {
+            let tokens = tokenize(source).unwrap();
+            assert_eq!(tokens[1].kind, TokenKind::Operator(operator));
+            assert_eq!(tokens[1].span, Span::new(1, end));
         }
     }
 
