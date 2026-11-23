@@ -81,6 +81,11 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
                 TokenKind::Operator(Operator::LessThanOrEqual)
             }
 
+            b'<' => {
+                pos += 1;
+                TokenKind::Operator(Operator::LessThan)
+            }
+
             b'=' => {
                 pos += 1;
                 TokenKind::Operator(Operator::Assign)
@@ -199,18 +204,15 @@ mod tests {
     }
 
     #[test]
-    fn tokenizes_less_than_or_equal_and_rejects_bare_less_than() {
-        let tokens = tokenize("1<=2").unwrap();
-        assert_eq!(
-            tokens[1].kind,
-            TokenKind::Operator(Operator::LessThanOrEqual)
-        );
-        assert_eq!(tokens[1].span, Span::new(1, 3));
-        for source in ["<", "1 < 2", "1 < = 2"] {
-            let error = tokenize(source).unwrap_err();
-            let start = source.find('<').unwrap();
-            assert_eq!(error.message, "unexpected character '<'");
-            assert_eq!(error.span, Span::new(start, start + 1));
+    fn tokenizes_less_than_and_less_than_or_equal() {
+        for (source, operator, end) in [
+            ("1<2", Operator::LessThan, 2),
+            ("1<=2", Operator::LessThanOrEqual, 3),
+            ("1< =2", Operator::LessThan, 2),
+        ] {
+            let tokens = tokenize(source).unwrap();
+            assert_eq!(tokens[1].kind, TokenKind::Operator(operator));
+            assert_eq!(tokens[1].span, Span::new(1, end));
         }
     }
 

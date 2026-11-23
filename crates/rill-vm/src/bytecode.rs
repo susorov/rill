@@ -33,6 +33,8 @@ pub enum Instruction {
     /// Compare two same-type numbers, with the left operand below the right on the stack.
     GreaterThanOrEqual,
     /// Compare two same-type numbers, with the left operand below the right on the stack.
+    LessThan,
+    /// Compare two same-type numbers, with the left operand below the right on the stack.
     LessThanOrEqual,
 }
 
@@ -49,6 +51,7 @@ impl fmt::Display for Instruction {
             Self::Equal => write!(f, "EQUAL"),
             Self::GreaterThan => write!(f, "GREATER_THAN"),
             Self::GreaterThanOrEqual => write!(f, "GREATER_THAN_OR_EQUAL"),
+            Self::LessThan => write!(f, "LESS_THAN"),
             Self::LessThanOrEqual => write!(f, "LESS_THAN_OR_EQUAL"),
             Self::Print => write!(f, "PRINT"),
             Self::PrintNewline => write!(f, "PRINT_NEWLINE"),

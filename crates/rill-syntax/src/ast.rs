@@ -52,5 +52,6 @@ pub enum BinaryOperator {
     NotEqual,
     GreaterThan,
     GreaterThanOrEqual,
+    LessThan,
     LessThanOrEqual,
 }

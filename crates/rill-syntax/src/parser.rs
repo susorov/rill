@@ -114,6 +114,7 @@ impl<'a> Parser<'a> {
             TokenKind::Operator(Operator::NotEqual) => BinaryOperator::NotEqual,
             TokenKind::Operator(Operator::GreaterThan) => BinaryOperator::GreaterThan,
             TokenKind::Operator(Operator::GreaterThanOrEqual) => BinaryOperator::GreaterThanOrEqual,
+            TokenKind::Operator(Operator::LessThan) => BinaryOperator::LessThan,
             TokenKind::Operator(Operator::LessThanOrEqual) => BinaryOperator::LessThanOrEqual,
             _ => return Ok(left),
         };
@@ -223,6 +224,40 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parses_less_than_with_operand_spans() {
+        let source = "let result = 10<-2";
+        let program = parse(source).unwrap();
+        let Statement::Let { value, .. } = &program.statements[0] else {
+            panic!("expected declaration");
+        };
+        let ExpressionKind::Binary {
+            left,
+            operator,
+            right,
+        } = &value.kind
+        else {
+            panic!("expected comparison");
+        };
+        assert_eq!(*operator, BinaryOperator::LessThan);
+        assert_eq!(&source[left.span.start..left.span.end], "10");
+        assert_eq!(&source[right.span.start..right.span.end], "-2");
+        assert_eq!(&source[value.span.start..value.span.end], "10<-2");
+        for source in [
+            "print(< 1)",
+            "print(1 < = 2)",
+            "print(1 < 2 <= 3)",
+            "print(1 < 2 > 3)",
+            "print(1 <)",
+            "let b = 1 <",
+            "print(1 < 2 < 3)",
+            "print(1 < 2 == true)",
+            "print(1 == 2 < 3)",
+        ] {
+            assert!(parse(source).is_err(), "{source}");
+        }
+    }
 
     #[test]
     fn parses_greater_than_with_operand_spans() {

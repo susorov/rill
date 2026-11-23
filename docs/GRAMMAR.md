@@ -70,7 +70,11 @@ boolean. `0.0 <= -0.0` is true.
 `print(10 > 5)`. It uses the same numeric type rules as `>=` and returns a
 boolean. Equal values return false, including `0.0 > -0.0`.
 
-Comparisons cannot be chained. Bare `<` is not supported.
+`<` tests whether the left number is strictly less than the right:
+`print(5 < 10)`. It uses the same numeric type rules as `>` and returns a
+boolean. Equal values return false, including `0.0 < -0.0`.
+
+Comparisons cannot be chained.
 
 ## Limitations
 
