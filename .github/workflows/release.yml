@@ -35,15 +35,16 @@ jobs:
         shell: bash
         run: |
           mkdir dist
+          cp README.md LICENSE-APACHE LICENSE-MIT.txt target/release/
           tar -czf "dist/rill-${{ github.ref_name }}-${{ matrix.platform }}.tar.gz" \
-            -C target/release rill
+            -C target/release rill README.md LICENSE-APACHE LICENSE-MIT.txt
 
       - name: Package Windows
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           mkdir dist
-          Compress-Archive -Path target/release/rill.exe `
+          Compress-Archive -Path target/release/rill.exe, README.md, LICENSE-APACHE, LICENSE-MIT.txt `
             -DestinationPath "dist/rill-${{ github.ref_name }}-${{ matrix.platform }}.zip"
 
       - uses: actions/upload-artifact@v7

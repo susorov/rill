@@ -2,6 +2,7 @@
   "name": "rill-syntax",
   "displayName": "rill",
   "version": "0.1.0",
+  "license": "MIT OR Apache-2.0",
   "engines": { "vscode": "*" },
   "contributes": {
     "languages": [{ "id": "rill", "aliases": ["rill"], "extensions": [".rill"] }],

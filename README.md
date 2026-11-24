@@ -58,3 +58,12 @@ rill --help
 - [Architecture](docs/ARCHITECTURE.md) describes the crates and how a source file becomes a running program.
 - [Language grammar](docs/GRAMMAR.md) covers syntax, types, and variable declarations.
 - [Bytecode guide](docs/BYTECODE.md) explains the VM instructions with a complete example.
+
+## License
+
+Rill is licensed under either the [MIT license](LICENSE-MIT) or the
+[Apache License, Version 2.0](LICENSE-APACHE), at your option.
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in Rill by you shall be dual licensed as above, without any
+additional terms or conditions.
