@@ -1,189 +1,247 @@
+//! Byte-oriented lexer for the language's ASCII syntax.
+//!
+//! Spans are half-open UTF-8 byte ranges. Identifiers are ASCII-only;
+//! strings may contain Unicode, but have no escape processing and cannot
+//! contain raw newlines. A minus immediately followed by a digit is part
+//! of a numeric literal. A decimal point must be followed by a digit.
+//! Spaces, tabs and `//` comments are ignored; LF, CRLF and CR produce
+//! newline tokens. Tokenization stops at the first error. On success,
+//! exactly one zero-width EOF token is appended.
+
 use crate::span::Span;
 use crate::token::{Delimiter, Keyword, LiteralKind, Operator, Token, TokenKind};
+use std::fmt;
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum LexErrorKind {
+    UnexpectedCharacter(char),
+    UnterminatedString,
+    ExpectedDigitAfterDecimalPoint,
+}
+
+impl fmt::Display for LexErrorKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::UnexpectedCharacter(ch) => write!(f, "unexpected character '{ch}'"),
+            Self::UnterminatedString => f.write_str("unterminated string"),
+            Self::ExpectedDigitAfterDecimalPoint => f.write_str("expected a digit after '.'"),
+        }
+    }
+}
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct LexError {
-    pub message: String,
+    pub kind: LexErrorKind,
     pub span: Span,
 }
 
+impl fmt::Display for LexError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self.kind, f)
+    }
+}
+
+impl std::error::Error for LexError {}
+
+/// Tokenize source text, retaining byte spans into the original source.
 pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
-    let bytes = source.as_bytes();
-    let mut tokens = Vec::new();
-    let mut pos = 0;
+    Lexer::new(source).tokenize()
+}
 
-    while pos < bytes.len() {
-        let start = pos;
-        let kind = match bytes[pos] {
-            b' ' | b'\t' => {
-                pos += 1;
-                continue;
-            }
+struct Lexer<'a> {
+    source: &'a str,
+    pos: usize,
+}
 
-            b'\n' => {
-                pos += 1;
-                TokenKind::Newline
-            }
-
-            // Treat CRLF as one newline; also accept a standalone CR.
-            b'\r' => {
-                pos += 1;
-
-                if pos < bytes.len() && bytes[pos] == b'\n' {
-                    pos += 1;
-                }
-
-                TokenKind::Newline
-            }
-
-            b'(' => {
-                pos += 1;
-                TokenKind::Delimiter(Delimiter::LeftParenthesis)
-            }
-
-            b')' => {
-                pos += 1;
-                TokenKind::Delimiter(Delimiter::RightParenthesis)
-            }
-
-            b'/' if bytes.get(pos + 1) == Some(&b'/') => {
-                pos += 2;
-
-                while pos < bytes.len() && bytes[pos] != b'\n' && bytes[pos] != b'\r' {
-                    pos += 1;
-                }
-
-                continue;
-            }
-
-            b'=' if bytes.get(pos + 1) == Some(&b'=') => {
-                pos += 2;
-                TokenKind::Operator(Operator::Equal)
-            }
-
-            b'!' if bytes.get(pos + 1) == Some(&b'=') => {
-                pos += 2;
-                TokenKind::Operator(Operator::NotEqual)
-            }
-
-            b'>' if bytes.get(pos + 1) == Some(&b'=') => {
-                pos += 2;
-                TokenKind::Operator(Operator::GreaterThanOrEqual)
-            }
-
-            b'>' => {
-                pos += 1;
-                TokenKind::Operator(Operator::GreaterThan)
-            }
-
-            b'<' if bytes.get(pos + 1) == Some(&b'=') => {
-                pos += 2;
-                TokenKind::Operator(Operator::LessThanOrEqual)
-            }
-
-            b'<' => {
-                pos += 1;
-                TokenKind::Operator(Operator::LessThan)
-            }
-
-            b'=' => {
-                pos += 1;
-                TokenKind::Operator(Operator::Assign)
-            }
-
-            b'"' => {
-                pos += 1;
-
-                loop {
-                    match bytes.get(pos) {
-                        Some(b'"') => {
-                            pos += 1;
-                            break TokenKind::Literal(LiteralKind::String);
-                        }
-                        Some(b'\n' | b'\r') | None => {
-                            return Err(LexError {
-                                message: "unterminated string".to_owned(),
-                                span: Span::new(start, pos),
-                            });
-                        }
-                        Some(_) => pos += 1,
-                    }
-                }
-            }
-
-            b'0'..=b'9' | b'-'
-                if bytes[pos] != b'-' || bytes.get(pos + 1).is_some_and(u8::is_ascii_digit) =>
-            {
-                pos += 1;
-
-                while bytes.get(pos).is_some_and(u8::is_ascii_digit) {
-                    pos += 1;
-                }
-
-                if bytes.get(pos) == Some(&b'.') {
-                    pos += 1;
-
-                    if !bytes.get(pos).is_some_and(u8::is_ascii_digit) {
-                        return Err(LexError {
-                            message: "expected a digit after '.'".to_owned(),
-                            span: Span::new(start, pos),
-                        });
-                    }
-
-                    while bytes.get(pos).is_some_and(u8::is_ascii_digit) {
-                        pos += 1;
-                    }
-
-                    TokenKind::Literal(LiteralKind::Float)
-                } else {
-                    TokenKind::Literal(LiteralKind::Integer)
-                }
-            }
-
-            // Match keywords only after scanning the full identifier (e.g. `let_count`).
-            b'a'..=b'z' | b'A'..=b'Z' | b'_' => {
-                pos += 1;
-
-                while pos < bytes.len()
-                    && (bytes[pos].is_ascii_alphanumeric() || bytes[pos] == b'_')
-                {
-                    pos += 1;
-                }
-
-                match &source[start..pos] {
-                    "let" => TokenKind::Keyword(Keyword::Let),
-                    "int" => TokenKind::Keyword(Keyword::Int),
-                    "bool" => TokenKind::Keyword(Keyword::Bool),
-                    "float" => TokenKind::Keyword(Keyword::Float),
-                    "print" => TokenKind::Keyword(Keyword::Print),
-                    "true" | "false" => TokenKind::Literal(LiteralKind::Boolean),
-                    _ => TokenKind::Identifier,
-                }
-            }
-
-            _ => {
-                // Cover the entire unexpected character in the diagnostic span.
-                let ch = source[pos..].chars().next().unwrap();
-
-                return Err(LexError {
-                    message: format!("unexpected character '{ch}'"),
-                    span: Span::new(pos, pos + ch.len_utf8()),
-                });
-            }
-        };
-
-        tokens.push(Token {
-            kind,
-            span: Span::new(start, pos),
-        });
+impl<'a> Lexer<'a> {
+    fn new(source: &'a str) -> Self {
+        Self { source, pos: 0 }
     }
 
-    tokens.push(Token {
-        kind: TokenKind::Eof,
-        span: Span::new(pos, pos),
-    });
+    fn tokenize(mut self) -> Result<Vec<Token>, LexError> {
+        let mut tokens = Vec::new();
 
-    Ok(tokens)
+        while let Some(byte) = self.peek() {
+            // The cursor is at a UTF-8 boundary at each dispatch. Scanning
+            // strings and comments may pass through interior UTF-8 bytes.
+            let start = self.pos;
+            let kind = match byte {
+                b' ' | b'\t' => {
+                    self.advance();
+                    continue;
+                }
+                b'\n' => {
+                    self.advance();
+                    TokenKind::Newline
+                }
+                b'\r' => {
+                    self.advance();
+                    self.consume_if(b'\n');
+                    TokenKind::Newline
+                }
+                b'(' => {
+                    self.advance();
+                    TokenKind::Delimiter(Delimiter::LeftParenthesis)
+                }
+                b')' => {
+                    self.advance();
+                    TokenKind::Delimiter(Delimiter::RightParenthesis)
+                }
+                b'/' if self.peek_next() == Some(b'/') => {
+                    self.skip_line_comment();
+                    continue;
+                }
+                b'=' => self.scan_operator(Operator::Assign, Operator::Equal),
+                b'!' if self.peek_next() == Some(b'=') => {
+                    self.advance();
+                    self.advance();
+                    TokenKind::Operator(Operator::NotEqual)
+                }
+                b'>' => self.scan_operator(Operator::GreaterThan, Operator::GreaterThanOrEqual),
+                b'<' => self.scan_operator(Operator::LessThan, Operator::LessThanOrEqual),
+                b'"' => self.scan_string(start)?,
+                b'0'..=b'9' => self.scan_number(start)?,
+                b'-' if self.peek_next().is_some_and(|b| b.is_ascii_digit()) => {
+                    self.scan_number(start)?
+                }
+                b'a'..=b'z' | b'A'..=b'Z' | b'_' => self.scan_identifier(start),
+                _ => return Err(self.unexpected_character()),
+            };
+
+            tokens.push(Token {
+                kind,
+                span: Span::new(start, self.pos),
+            });
+        }
+
+        tokens.push(Token {
+            kind: TokenKind::Eof,
+            span: Span::new(self.pos, self.pos),
+        });
+        Ok(tokens)
+    }
+
+    fn peek(&self) -> Option<u8> {
+        self.source.as_bytes().get(self.pos).copied()
+    }
+
+    fn peek_next(&self) -> Option<u8> {
+        self.source.as_bytes().get(self.pos + 1).copied()
+    }
+
+    /// Advance one byte; callers must have confirmed a byte is present.
+    fn advance(&mut self) {
+        debug_assert!(self.peek().is_some());
+        self.pos += 1;
+    }
+
+    fn consume_if(&mut self, expected: u8) -> bool {
+        if self.peek() == Some(expected) {
+            self.advance();
+            true
+        } else {
+            false
+        }
+    }
+
+    fn skip_line_comment(&mut self) {
+        // The dispatch has already confirmed the two-byte comment prefix.
+        self.advance();
+        self.advance();
+        while let Some(byte) = self.peek() {
+            if matches!(byte, b'\n' | b'\r') {
+                break;
+            }
+            self.advance();
+        }
+    }
+
+    fn scan_operator(&mut self, single: Operator, with_equal: Operator) -> TokenKind {
+        self.advance();
+        let operator = if self.consume_if(b'=') {
+            with_equal
+        } else {
+            single
+        };
+        TokenKind::Operator(operator)
+    }
+
+    fn scan_string(&mut self, start: usize) -> Result<TokenKind, LexError> {
+        self.advance(); // Opening quote.
+        loop {
+            match self.peek() {
+                Some(b'"') => {
+                    self.advance();
+                    return Ok(TokenKind::Literal(LiteralKind::String));
+                }
+                Some(b'\n' | b'\r') | None => {
+                    return Err(self.error(start, LexErrorKind::UnterminatedString));
+                }
+                Some(_) => self.advance(),
+            }
+        }
+    }
+
+    fn scan_number(&mut self, start: usize) -> Result<TokenKind, LexError> {
+        self.consume_if(b'-');
+        self.scan_digits();
+
+        let kind = if self.consume_if(b'.') {
+            if !self.peek().is_some_and(|b| b.is_ascii_digit()) {
+                return Err(self.error(start, LexErrorKind::ExpectedDigitAfterDecimalPoint));
+            }
+            self.scan_digits();
+            LiteralKind::Float
+        } else {
+            LiteralKind::Integer
+        };
+        Ok(TokenKind::Literal(kind))
+    }
+
+    fn scan_digits(&mut self) {
+        while self.peek().is_some_and(|b| b.is_ascii_digit()) {
+            self.advance();
+        }
+    }
+
+    fn scan_identifier(&mut self, start: usize) -> TokenKind {
+        while self
+            .peek()
+            .is_some_and(|b| b.is_ascii_alphanumeric() || b == b'_')
+        {
+            self.advance();
+        }
+
+        // Classify only after consuming the complete identifier.
+        match &self.source[start..self.pos] {
+            "let" => TokenKind::Keyword(Keyword::Let),
+            "int" => TokenKind::Keyword(Keyword::Int),
+            "bool" => TokenKind::Keyword(Keyword::Bool),
+            "float" => TokenKind::Keyword(Keyword::Float),
+            "print" => TokenKind::Keyword(Keyword::Print),
+            "true" | "false" => TokenKind::Literal(LiteralKind::Boolean),
+            _ => TokenKind::Identifier,
+        }
+    }
+
+    fn error(&self, start: usize, kind: LexErrorKind) -> LexError {
+        LexError {
+            kind,
+            span: Span::new(start, self.pos),
+        }
+    }
+
+    fn unexpected_character(&self) -> LexError {
+        // Only called at dispatch, with a byte present at a UTF-8 boundary.
+        let ch = self.source[self.pos..]
+            .chars()
+            .next()
+            .expect("lexer cursor must point to a character");
+        LexError {
+            kind: LexErrorKind::UnexpectedCharacter(ch),
+            span: Span::new(self.pos, self.pos + ch.len_utf8()),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -250,7 +308,7 @@ mod tests {
             assert_eq!(
                 tokenize(&source).unwrap_err(),
                 LexError {
-                    message: "expected a digit after '.'".to_owned(),
+                    kind: LexErrorKind::ExpectedDigitAfterDecimalPoint,
                     span: Span::new(8, 8 + end),
                 }
             );
@@ -300,7 +358,7 @@ mod tests {
             assert_eq!(
                 tokenize(&source).unwrap_err(),
                 LexError {
-                    message: "unexpected character '-'".to_owned(),
+                    kind: LexErrorKind::UnexpectedCharacter('-'),
                     span: Span::new(8, 9),
                 }
             );
@@ -359,7 +417,7 @@ mod tests {
             assert_eq!(
                 tokenize(source).unwrap_err(),
                 LexError {
-                    message: "unterminated string".to_owned(),
+                    kind: LexErrorKind::UnterminatedString,
                     span: Span::new(0, source.len()),
                 }
             );
@@ -374,7 +432,7 @@ mod tests {
             assert_eq!(
                 tokenize(&source).unwrap_err(),
                 LexError {
-                    message: "unterminated string".to_owned(),
+                    kind: LexErrorKind::UnterminatedString,
                     span: Span::new(0, 6),
                 }
             );
@@ -414,7 +472,7 @@ mod tests {
             assert_eq!(
                 tokenize(source).unwrap_err(),
                 LexError {
-                    message: "unexpected character '/'".to_owned(),
+                    kind: LexErrorKind::UnexpectedCharacter('/'),
                     span: Span::new(start, start + 1),
                 }
             );
@@ -566,7 +624,7 @@ mod tests {
 
     #[test]
     fn appends_eof_after_ignored_input() {
-        for source in [" \t", "//", " \t// hé🙂", "// first\r\n \t// last"] {
+        for source in [" \t", "//", " \t// héᮯ", "// first\r\n \t// last"] {
             let tokens = tokenize(source).unwrap();
             let expected_len = if source.contains('\r') { 2 } else { 1 };
 
@@ -585,41 +643,149 @@ mod tests {
             assert_eq!(
                 tokenize(&source).unwrap_err(),
                 LexError {
-                    message: "unexpected character 'λ'".to_owned(),
+                    kind: LexErrorKind::UnexpectedCharacter('λ'),
                     span: Span::new(prefix.len(), source.len()),
                 }
             );
         }
     }
-}
 
-#[test]
-fn tokenizes_print_statement() {
-    let tokens = tokenize("print(count)").unwrap();
+    #[test]
+    fn tokenizes_print_statement() {
+        let tokens = tokenize("print(count)").unwrap();
 
-    let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
+        let kinds: Vec<_> = tokens.iter().map(|t| t.kind).collect();
 
-    assert_eq!(
-        kinds,
-        vec![
-            TokenKind::Keyword(Keyword::Print),
-            TokenKind::Delimiter(Delimiter::LeftParenthesis),
-            TokenKind::Identifier,
-            TokenKind::Delimiter(Delimiter::RightParenthesis),
-            TokenKind::Eof,
-        ]
-    );
+        assert_eq!(
+            kinds,
+            vec![
+                TokenKind::Keyword(Keyword::Print),
+                TokenKind::Delimiter(Delimiter::LeftParenthesis),
+                TokenKind::Identifier,
+                TokenKind::Delimiter(Delimiter::RightParenthesis),
+                TokenKind::Eof,
+            ]
+        );
 
-    assert_eq!(tokens[0].span, Span::new(0, 5));
-    assert_eq!(tokens[1].span, Span::new(5, 6));
-    assert_eq!(tokens[2].span, Span::new(6, 11));
-    assert_eq!(tokens[3].span, Span::new(11, 12));
-}
+        assert_eq!(tokens[0].span, Span::new(0, 5));
+        assert_eq!(tokens[1].span, Span::new(5, 6));
+        assert_eq!(tokens[2].span, Span::new(6, 11));
+        assert_eq!(tokens[3].span, Span::new(11, 12));
+    }
 
-#[test]
-fn tokenizes_not_equal_with_span() {
-    let tokens = tokenize("1!=2").unwrap();
-    assert_eq!(tokens[1].kind, TokenKind::Operator(Operator::NotEqual));
-    assert_eq!(tokens[1].span, Span::new(1, 3));
-    assert!(tokenize("!").is_err());
+    #[test]
+    fn tokenizes_not_equal_with_span() {
+        let tokens = tokenize("1!=2").unwrap();
+        assert_eq!(tokens[1].kind, TokenKind::Operator(Operator::NotEqual));
+        assert_eq!(tokens[1].span, Span::new(1, 3));
+        assert!(tokenize("!").is_err());
+    }
+
+    #[test]
+    fn recognizes_all_supported_operators() {
+        for (source, operator) in [
+            ("=", Operator::Assign),
+            ("==", Operator::Equal),
+            ("!=", Operator::NotEqual),
+            (">", Operator::GreaterThan),
+            (">=", Operator::GreaterThanOrEqual),
+            ("<", Operator::LessThan),
+            ("<=", Operator::LessThanOrEqual),
+        ] {
+            let tokens = tokenize(source).unwrap();
+            assert_eq!(tokens.len(), 2);
+            assert_eq!(tokens[0].kind, TokenKind::Operator(operator));
+            assert_eq!(tokens[0].span, Span::new(0, source.len()));
+            assert_eq!(tokens[1].kind, TokenKind::Eof);
+            assert_eq!(tokens[1].span, Span::new(source.len(), source.len()));
+        }
+    }
+
+    #[test]
+    fn preserves_diagnostic_wording() {
+        for (source, expected) in [
+            ("!", "unexpected character '!'"),
+            ("λ", "unexpected character 'λ'"),
+            ("\"hello", "unterminated string"),
+            ("1.", "expected a digit after '.'"),
+        ] {
+            assert_eq!(tokenize(source).unwrap_err().to_string(), expected);
+        }
+    }
+
+    // Check invariants without assuming public field names on Span or
+    // introducing a property-testing dependency into the parent crate.
+    fn assert_lexer_invariants(source: &str) {
+        let boundaries: Vec<_> = source
+            .char_indices()
+            .map(|(offset, _)| offset)
+            .chain(std::iter::once(source.len()))
+            .collect();
+
+        match tokenize(source) {
+            Ok(tokens) => {
+                let (eof, body) = tokens.split_last().expect("missing EOF");
+                assert_eq!(eof.kind, TokenKind::Eof, "{source:?}");
+                assert_eq!(
+                    eof.span,
+                    Span::new(source.len(), source.len()),
+                    "{source:?}"
+                );
+                let mut previous_end = 0;
+                for token in body {
+                    assert_ne!(token.kind, TokenKind::Eof, "{source:?}");
+                    let mut found = None;
+                    'ranges: for &start in &boundaries {
+                        if start < previous_end {
+                            continue;
+                        }
+                        for &end in &boundaries {
+                            if end > start && token.span == Span::new(start, end) {
+                                found = Some(end);
+                                break 'ranges;
+                            }
+                        }
+                    }
+                    previous_end = found.unwrap_or_else(|| {
+                        panic!("invalid or overlapping token span for {source:?}")
+                    });
+                }
+            }
+            Err(error) => {
+                assert!(
+                    boundaries.iter().any(|&start| {
+                        boundaries
+                            .iter()
+                            .any(|&end| start < end && error.span == Span::new(start, end))
+                    }),
+                    "invalid error span for {source:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn checks_invariants_for_generated_utf8_inputs() {
+        const ALPHABET: &[char] = &[
+            'a', '_', '0', '9', '-', '.', '"', '/', '=', '!', '>', '<', '(', ')', ' ', '\t', '\n',
+            '\r', 'é', 'λ', 'ᮯ', '\\',
+        ];
+
+        fn visit(source: &mut String, remaining: usize) {
+            assert_lexer_invariants(source);
+            if remaining == 0 {
+                return;
+            }
+            for &ch in ALPHABET {
+                source.push(ch);
+                visit(source, remaining - 1);
+                source.pop();
+            }
+        }
+
+        visit(&mut String::new(), 4);
+        for source in ["let x = -42.5", "print(\"héᮯ\")", "// λ\r\nlet x = 0"] {
+            assert_lexer_invariants(source);
+        }
+    }
 }

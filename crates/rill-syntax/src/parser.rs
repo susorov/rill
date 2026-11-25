@@ -1,5 +1,5 @@
 use crate::ast::{BinaryOperator, Expression, ExpressionKind, Program, Statement};
-use crate::lexer::tokenize;
+use crate::lexer::{LexError, tokenize};
 use crate::span::Span;
 use crate::token::{Delimiter, Keyword, LiteralKind, Operator, Token, TokenKind};
 
@@ -9,11 +9,17 @@ pub struct ParseError {
     pub span: Span,
 }
 
+impl From<LexError> for ParseError {
+    fn from(error: LexError) -> Self {
+        Self {
+            message: error.to_string(),
+            span: error.span,
+        }
+    }
+}
+
 pub fn parse(source: &str) -> Result<Program, ParseError> {
-    let tokens = tokenize(source).map_err(|error| ParseError {
-        message: error.message,
-        span: error.span,
-    })?;
+    let tokens = tokenize(source)?;
 
     Parser {
         source,
