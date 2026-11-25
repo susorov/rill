@@ -7,12 +7,12 @@
 
 use crate::span::Span;
 
-/// A token's type and source location.
+/// A token's classification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenKind {
     Keyword(Keyword),
     Identifier,
-    Literal(Literal),
+    Literal(LiteralKind),
     Operator(Operator),
     Delimiter(Delimiter),
     /// A line ending: LF, CRLF, or CR. CRLF spans two bytes.
@@ -34,7 +34,7 @@ pub enum Keyword {
 /// Literal types. The parser reads the value from the source span
 /// and checks numeric ranges.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Literal {
+pub enum LiteralKind {
     Integer,
     Float,
     Boolean,

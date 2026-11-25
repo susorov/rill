@@ -1,7 +1,7 @@
 use crate::ast::{BinaryOperator, Expression, ExpressionKind, Program, Statement};
 use crate::lexer::tokenize;
 use crate::span::Span;
-use crate::token::{Delimiter, Keyword, Literal, Operator, Token, TokenKind};
+use crate::token::{Delimiter, Keyword, LiteralKind, Operator, Token, TokenKind};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseError {
@@ -138,7 +138,7 @@ impl<'a> Parser<'a> {
         let token = self.current();
 
         let kind = match token.kind {
-            TokenKind::Literal(Literal::Integer) => {
+            TokenKind::Literal(LiteralKind::Integer) => {
                 let value = self.source[token.span.start..token.span.end]
                     .parse::<i64>()
                     .map_err(|_| ParseError {
@@ -149,7 +149,7 @@ impl<'a> Parser<'a> {
                 ExpressionKind::Integer(value)
             }
 
-            TokenKind::Literal(Literal::Float) => {
+            TokenKind::Literal(LiteralKind::Float) => {
                 let value = self.source[token.span.start..token.span.end]
                     .parse::<f64>()
                     .map_err(|_| ParseError {
@@ -167,7 +167,7 @@ impl<'a> Parser<'a> {
                 ExpressionKind::Float(value)
             }
 
-            TokenKind::Literal(Literal::Boolean) => {
+            TokenKind::Literal(LiteralKind::Boolean) => {
                 let value = self.source[token.span.start..token.span.end]
                     .parse::<bool>()
                     .map_err(|_| ParseError {
@@ -178,7 +178,7 @@ impl<'a> Parser<'a> {
                 ExpressionKind::Boolean(value)
             }
 
-            TokenKind::Literal(Literal::String) => {
+            TokenKind::Literal(LiteralKind::String) => {
                 let value = self.source[token.span.start + 1..token.span.end - 1].to_owned();
 
                 ExpressionKind::String(value)
