@@ -309,7 +309,15 @@ mod tests {
 
     #[test]
     fn tokenizes_strings_as_single_tokens_with_quoted_byte_spans() {
-        for text in ["", "hello world", "// not a comment", "true (42)"] {
+        for text in [
+            "",
+            "hello world",
+            "// not a comment",
+            "true (42)",
+            "héЩ",
+            "\\n",
+            "\\",
+        ] {
             let source = format!("\"{text}\"");
             let tokens = tokenize(&source).unwrap();
 
@@ -347,7 +355,7 @@ mod tests {
 
     #[test]
     fn rejects_unterminated_strings_at_eof() {
-        for source in ["\"", "\"hello"] {
+        for source in ["\"", "\"hello", "\"héᕮ"] {
             assert_eq!(
                 tokenize(source).unwrap_err(),
                 LexError {
@@ -554,6 +562,34 @@ mod tests {
         let tokens = tokenize("let_count = 42").unwrap();
 
         assert_eq!(tokens[0].kind, TokenKind::Identifier);
+    }
+
+    #[test]
+    fn appends_eof_after_ignored_input() {
+        for source in [" \t", "//", " \t// hé🙂", "// first\r\n \t// last"] {
+            let tokens = tokenize(source).unwrap();
+            let expected_len = if source.contains('\r') { 2 } else { 1 };
+
+            assert_eq!(tokens.len(), expected_len);
+            let eof = tokens.last().unwrap();
+            assert_eq!(eof.kind, TokenKind::Eof);
+            assert_eq!(eof.span, Span::new(source.len(), source.len()));
+        }
+    }
+
+    #[test]
+    fn reports_full_unexpected_unicode_character_span() {
+        for prefix in ["", "\"héᮯ\" ", "// héᮯ\r\n \t"] {
+            let source = format!("{prefix}λ");
+
+            assert_eq!(
+                tokenize(&source).unwrap_err(),
+                LexError {
+                    message: "unexpected character 'λ'".to_owned(),
+                    span: Span::new(prefix.len(), source.len()),
+                }
+            );
+        }
     }
 }
 
