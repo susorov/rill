@@ -49,15 +49,6 @@ pub enum ExpressionKind {
     },
 }
 
-/// Types used by the compiler to check expressions.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ExpressionType {
-    Integer,
-    Float,
-    Boolean,
-    String,
-}
-
 /// Comparison operators used in expressions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BinaryOperator {

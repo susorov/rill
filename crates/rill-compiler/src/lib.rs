@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
-use rill_syntax::ast::{
-    BinaryOperator, Expression, ExpressionKind, ExpressionType, Program, Statement,
-};
+use rill_syntax::ast::{BinaryOperator, Expression, ExpressionKind, Program, Statement};
 use rill_syntax::span::Span;
 use rill_vm::bytecode::{Bytecode, Instruction};
 
@@ -26,6 +24,15 @@ pub fn compile(program: &Program) -> Result<Bytecode, CompileError> {
     }
 
     Ok(compiler.bytecode)
+}
+
+/// Types used by the compiler to check expressions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ExpressionType {
+    Integer,
+    Float,
+    Boolean,
+    String,
 }
 
 struct Local {
