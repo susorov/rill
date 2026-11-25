@@ -45,7 +45,7 @@ impl Compiler {
                 if self.locals.contains_key(name) {
                     return Err(CompileError {
                         message: format!("variable '{name}' is already declared"),
-                        span: span.clone(),
+                        span: *span,
                     });
                 }
                 let value_type = self.compile_expression(value)?;
@@ -53,7 +53,7 @@ impl Compiler {
                 let slot = self.bytecode.local_count;
                 self.bytecode.local_count = slot.checked_add(1).ok_or_else(|| CompileError {
                     message: "too many local variables".to_owned(),
-                    span: span.clone(),
+                    span: *span,
                 })?;
                 self.bytecode
                     .instructions
@@ -92,7 +92,7 @@ impl Compiler {
             ExpressionKind::Identifier(name) => {
                 let local = self.locals.get(name).ok_or_else(|| CompileError {
                     message: format!("undefined variable '{name}'"),
-                    span: expression.span.clone(),
+                    span: expression.span,
                 })?;
                 (Instruction::LoadLocal(local.slot), local.value_type)
             }
@@ -124,35 +124,35 @@ impl Compiler {
                         message: format!(
                             "cannot compare {left_type:?} with {right_type:?}: operands must have the same type or both be numeric"
                         ),
-                        span: expression.span.clone(),
+                        span: expression.span,
                     });
                 }
 
                 if *operator == BinaryOperator::LessThan && !is_numeric {
                     return Err(CompileError {
                         message: "'<' requires integer or float operands".to_owned(),
-                        span: expression.span.clone(),
+                        span: expression.span,
                     });
                 }
 
                 if *operator == BinaryOperator::GreaterThan && !is_numeric {
                     return Err(CompileError {
                         message: "'>' requires integer or float operands".to_owned(),
-                        span: expression.span.clone(),
+                        span: expression.span,
                     });
                 }
 
                 if *operator == BinaryOperator::GreaterThanOrEqual && !is_numeric {
                     return Err(CompileError {
                         message: "'>=' requires integer or float operands".to_owned(),
-                        span: expression.span.clone(),
+                        span: expression.span,
                     });
                 }
 
                 if *operator == BinaryOperator::LessThanOrEqual && !is_numeric {
                     return Err(CompileError {
                         message: "'<=' requires integer or float operands".to_owned(),
-                        span: expression.span.clone(),
+                        span: expression.span,
                     });
                 }
                 (instruction, ExpressionType::Boolean)

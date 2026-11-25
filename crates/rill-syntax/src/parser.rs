@@ -143,7 +143,7 @@ impl<'a> Parser<'a> {
                     .parse::<i64>()
                     .map_err(|_| ParseError {
                         message: "integer literal is out of range for i64".into(),
-                        span: token.span.clone(),
+                        span: token.span,
                     })?;
 
                 ExpressionKind::Integer(value)
@@ -154,13 +154,13 @@ impl<'a> Parser<'a> {
                     .parse::<f64>()
                     .map_err(|_| ParseError {
                         message: "float literal is out of range for f64".into(),
-                        span: token.span.clone(),
+                        span: token.span,
                     })?;
 
                 if !value.is_finite() {
                     return Err(ParseError {
                         message: "float literal is out of range for f64".into(),
-                        span: token.span.clone(),
+                        span: token.span,
                     });
                 }
 
@@ -172,7 +172,7 @@ impl<'a> Parser<'a> {
                     .parse::<bool>()
                     .map_err(|_| ParseError {
                         message: "bool literal should be true or false".into(),
-                        span: token.span.clone(),
+                        span: token.span,
                     })?;
 
                 ExpressionKind::Boolean(value)
@@ -193,7 +193,7 @@ impl<'a> Parser<'a> {
             _ => return Err(self.error("expected an expression")),
         };
 
-        let span = token.span.clone();
+        let span = token.span;
         self.pos += 1;
 
         Ok(Expression { kind, span })
@@ -216,7 +216,7 @@ impl<'a> Parser<'a> {
     fn error(&self, message: &str) -> ParseError {
         ParseError {
             message: message.to_owned(),
-            span: self.current().span.clone(),
+            span: self.current().span,
         }
     }
 }

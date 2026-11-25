@@ -264,7 +264,7 @@ mod tests {
         assert_eq!(
             tokens
                 .iter()
-                .map(|token| (token.kind, token.span.clone()))
+                .map(|token| (token.kind, token.span))
                 .collect::<Vec<_>>(),
             vec![
                 (TokenKind::Literal(LiteralKind::Integer), Span::new(0, 1)),
