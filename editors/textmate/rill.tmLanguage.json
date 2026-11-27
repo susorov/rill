@@ -32,7 +32,7 @@
     {
       "name": "string.quoted.double.rill",
       "begin": "\"",
-      "end": "\""
+      "end": "\"|(?=[\\r\\n]|$)"
     },
     {
       "name": "entity.name.function.rill",
