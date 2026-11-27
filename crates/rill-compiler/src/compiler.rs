@@ -91,6 +91,13 @@ impl Compiler {
                     self.bytecode.instructions.push(Instruction::PrintNewline);
                 }
             }
+
+            Statement::If { span, .. } => {
+                return Err(CompileError {
+                    message: "conditional statements are not supported by the compiler yet".into(),
+                    span: *span,
+                });
+            }
         }
 
         Ok(())

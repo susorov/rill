@@ -11,7 +11,7 @@ pub struct Program {
     pub statements: Vec<Statement>,
 }
 
-/// A variable declaration or print statement.
+/// A variable declaration, print call, or conditional statement.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     /// A variable declaration with an initializer.
@@ -28,6 +28,17 @@ pub enum Statement {
         /// None represents print() without a value.
         value: Option<Expression>,
         /// Source range from `print` through the closing parenthesis.
+        span: Span,
+    },
+    /// A conditional statement with an optional else branch.
+    If {
+        /// Condition expression; boolean type checking belongs to the compiler.
+        condition: Expression,
+        /// Statements executed when the condition is true.
+        then_branch: Vec<Statement>,
+        /// Statements executed when the condition is false; `None` means no `else`.
+        else_branch: Option<Vec<Statement>>,
+        /// Source range from `if` through the final branch's closing brace.
         span: Span,
     },
 }

@@ -12,7 +12,7 @@ print(version)
 print()
 ```
 
-Each statement must be on a separate line. Blank lines are allowed, and the final newline is optional.
+Separate consecutive statements with a newline, including inside blocks. Blank lines are allowed, and the final newline is optional.
 
 ## Data Types
 
@@ -35,8 +35,10 @@ Variables must be declared before use. Redeclaration and reassignment are not al
 
 Reserved words: `let`, `if`, `else`, `int`, `float`, `bool`, `true`, `false`, `print`.
 
-`if` and `else` are reserved for planned conditional statements. The lexer
-recognizes these keywords and braces, but conditional statements are not yet supported.
+The parser accepts `if condition { ... }` with an optional `else { ... }` block.
+The opening brace can appear on the next line. The `else` keyword may follow
+the closing brace on the same line or after blank lines and comments.
+Conditional execution is pending compiler support.
 
 ## Printing
 

@@ -387,9 +387,71 @@ fn accepts_empty_programs() {
 }
 
 #[test]
+fn accepts_else_on_the_same_or_a_later_line() {
+    for separator in [" ", "\n", " // comment\r\n\r\n", "\r// comment\r"] {
+        let source = format!("if true\n{{ print(1) }}{separator}else {{ print(2) }}");
+        let program = parse(&source).unwrap();
+        let [
+            Statement::If {
+                then_branch,
+                else_branch: Some(else_branch),
+                span,
+                ..
+            },
+        ] = program.statements.as_slice()
+        else {
+            panic!("expected an if with an else branch");
+        };
+        assert_eq!(then_branch.len(), 1);
+        assert_eq!(else_branch.len(), 1);
+        assert_eq!(*span, Span::new(0, source.len()));
+    }
+}
+
+#[test]
+fn preserves_the_statement_separator_after_an_if_without_else() {
+    let source = "if true {\n    if false {}\n    print(1)\n}\n// next statement\nprint(2)";
+    let program = parse(source).unwrap();
+    let [
+        Statement::If {
+            then_branch,
+            else_branch: None,
+            ..
+        },
+        Statement::Print { .. },
+    ] = program.statements.as_slice()
+    else {
+        panic!("expected an if followed by a print");
+    };
+    assert!(matches!(
+        then_branch.as_slice(),
+        [
+            Statement::If {
+                else_branch: None,
+                ..
+            },
+            Statement::Print { .. }
+        ]
+    ));
+}
+
+#[test]
+fn requires_a_newline_between_statements_in_blocks() {
+    for source in [
+        "if true { print(1) print(2) }",
+        "if true {} else { if false {} print(2) }",
+    ] {
+        let error = parse(source).unwrap_err();
+        let start = source.rfind("print").unwrap();
+        assert_eq!(error.message, "expected a newline or '}'");
+        assert_eq!(error.span, Span::new(start, start + 5));
+    }
+}
+
+#[test]
 fn reports_missing_or_unexpected_declaration_parts() {
     for (source, message, start, end) in [
-        ("x = 1", "expected 'let'", 0, 1),
+        ("x = 1", "expected a statement", 0, 1),
         ("let", "expected an identifier", 3, 3),
         ("let = 1", "expected an identifier", 4, 5),
         ("let let = 1", "expected an identifier", 4, 7),
@@ -412,20 +474,22 @@ fn reports_missing_or_unexpected_declaration_parts() {
 }
 
 #[test]
-fn rejects_trailing_tokens_on_the_same_line() {
-    for (source, end) in [
-        ("let x = 1 let y = 2", 13),
-        ("let x = 1 y", 11),
-        ("let x = y let z = 2", 13),
-        ("let x = y z", 11),
-        ("let x = y 1", 11),
+fn rejects_unexpected_tokens_after_statements() {
+    for (source, start, end) in [
+        ("let x = 1 let y = 2", 10, 13),
+        ("let x = y let z = 2", 10, 13),
+        ("if true {} print()", 11, 16),
+        ("let x = 1 y", 10, 11),
+        ("let x = y z", 10, 11),
+        ("let x = y 1", 10, 11),
     ] {
         assert_eq!(
             parse(source).unwrap_err(),
             ParseError {
                 message: "expected a newline or end of file".to_owned(),
-                span: Span::new(10, end),
-            }
+                span: Span::new(start, end),
+            },
+            "source: {source:?}"
         );
     }
 }
