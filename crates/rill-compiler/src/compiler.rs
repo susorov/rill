@@ -1,4 +1,9 @@
 //! Compiles syntax trees into bytecode.
+//!
+//! Statements are compiled in source order. Local slots are numbered from
+//! zero and each declaration becomes visible after its initializer.
+//! Equality accepts operands of the same type or two numeric operands.
+//! Compilation stops at the first error and discards partial bytecode.
 
 use std::collections::HashMap;
 
@@ -7,7 +12,15 @@ use rill_vm::bytecode::{Bytecode, Instruction};
 
 use crate::error::CompileError;
 
-/// Compile a program into executable bytecode.
+/// Compile a syntax tree into owned bytecode, resolving names and checking types.
+///
+/// Variables must be declared before use and cannot be redeclared.
+/// Each call starts with empty locals and preserves statement order.
+///
+/// # Errors
+///
+/// Returns the first [`CompileError`] for undefined or duplicate variables,
+/// invalid comparisons or exhausted local slots. Partial bytecode is discarded.
 pub fn compile(program: &Program) -> Result<Bytecode, CompileError> {
     let mut compiler = Compiler {
         locals: HashMap::new(),

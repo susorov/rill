@@ -1,11 +1,22 @@
+//! Bytecode instructions and local slot allocation.
+
 use std::fmt;
 
+/// Instructions and local slot count for a program.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Bytecode {
+    /// Instructions in execution order.
     pub instructions: Vec<Instruction>,
+    /// Number of local slots, addressed from zero.
     pub local_count: u32,
 }
 
+/// An operation on the VM's stack or local slots.
+///
+/// Comparisons consume `[left, right]` and push a boolean.
+/// Equality accepts matching types or numeric pairs; ordering requires numbers.
+/// Mixed numeric pairs convert the integer to `f64`, which may round large values.
+/// With NaN, only `!=` returns true; other numeric comparisons return false.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Instruction {
     /// Push an integer onto the operand stack.
@@ -14,7 +25,7 @@ pub enum Instruction {
     PushBoolean(bool),
     /// Push a float onto the operand stack.
     PushFloat(f64),
-    /// Push a string onto the operand stack.
+    /// Push a copy of a string onto the operand stack.
     PushString(String),
     /// Pop a value from the operand stack into a local slot.
     StoreLocal(u32),
@@ -24,17 +35,17 @@ pub enum Instruction {
     Print,
     /// Print an empty line.
     PrintNewline,
-    /// Compare two values of the same type and push a boolean.
+    /// Compare `left == right`.
     Equal,
-    /// Compare two same-type values for inequality.
+    /// Compare `left != right`.
     NotEqual,
-    /// Compare two same-type numbers, with the left operand below the right on the stack.
+    /// Compare `left > right`.
     GreaterThan,
-    /// Compare two same-type numbers, with the left operand below the right on the stack.
+    /// Compare `left >= right`.
     GreaterThanOrEqual,
-    /// Compare two same-type numbers, with the left operand below the right on the stack.
+    /// Compare `left < right`.
     LessThan,
-    /// Compare two same-type numbers, with the left operand below the right on the stack.
+    /// Compare `left <= right`.
     LessThanOrEqual,
 }
 

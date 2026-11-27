@@ -1,3 +1,10 @@
+//! Command-line runner for UTF-8 `.rill` source files.
+//!
+//! `rill <file.rill>` compiles and executes; `--bytecode <file.rill>` prints
+//! instructions without running. `--help` and `--version` show usage and version.
+//! Normal output goes to stdout. Reported errors go to stderr with exit status 1;
+//! success returns 0. Syntax and compilation errors include `path:line:column`.
+
 use std::path::Path;
 use std::process::ExitCode;
 

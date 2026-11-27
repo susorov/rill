@@ -1,13 +1,20 @@
+//! Bytecode execution and runtime errors.
+
 use std::fmt;
 
 use crate::bytecode::{Bytecode, Instruction};
 use crate::value::Value;
 
+/// An invalid runtime state encountered by an instruction.
 #[derive(Debug, PartialEq, Eq)]
 pub enum VmError {
+    /// A local-slot index is outside the allocated range.
     InvalidLocal(u32),
+    /// A local slot was read before a value was stored.
     UninitializedLocal(u32),
+    /// The stack contains fewer operands than the instruction requires.
     StackUnderflow,
+    /// Comparison operands have unsupported types.
     TypeMismatch,
 }
 
@@ -26,6 +33,7 @@ impl fmt::Display for VmError {
 
 impl std::error::Error for VmError {}
 
+/// Execution state for borrowed bytecode.
 #[derive(Debug)]
 pub struct Vm<'a> {
     bytecode: &'a Bytecode,
@@ -35,6 +43,8 @@ pub struct Vm<'a> {
 }
 
 impl<'a> Vm<'a> {
+    /// Start at instruction zero with an empty stack and uninitialized locals.
+    /// The VM borrows the bytecode without validating its instructions.
     pub fn new(bytecode: &'a Bytecode) -> Self {
         Self {
             bytecode,
@@ -49,16 +59,27 @@ impl<'a> Vm<'a> {
         &self.stack
     }
 
-    /// Return the current local slots, including uninitialized slots.
+    /// Return local slots in index order; `None` marks an uninitialized slot.
     pub fn locals(&self) -> &[Option<Value>] {
         &self.locals
     }
 
-    /// Return the index of the next instruction to execute.
+    /// Return the next instruction's index, or the instruction count after completion.
     pub fn instruction_pointer(&self) -> usize {
         self.instruction_pointer
     }
 
+    /// Execute from the current instruction to the end, printing to stdout.
+    /// Calling this again after completion does nothing.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`VmError`] on an invalid runtime state. The failing instruction
+    /// leaves the stack, locals, and instruction pointer unchanged.
+    ///
+    /// # Panics
+    ///
+    /// Panics if writing to stdout fails.
     pub fn run(&mut self) -> Result<(), VmError> {
         while let Some(instruction) = self.bytecode.instructions.get(self.instruction_pointer) {
             match instruction {

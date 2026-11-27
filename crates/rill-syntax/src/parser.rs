@@ -1,11 +1,20 @@
+//! Source parsing and syntax diagnostics.
+//!
+//! Builds owned syntax trees for declarations and print statements.
+//! Name resolution and comparison type checking are left to the compiler.
+
 use crate::ast::{BinaryOperator, Expression, ExpressionKind, Program, Statement};
 use crate::lexer::{LexError, tokenize};
 use crate::span::Span;
 use crate::token::{Delimiter, Keyword, LiteralKind, Operator, Token, TokenKind};
 
+/// A lexical or parsing failure and its source location.
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseError {
+    /// Human-readable description of the failure.
     pub message: String,
+    /// Offending token or literal's byte range; empty at unexpected EOF.
+    /// Lexical errors retain the lexer's span.
     pub span: Span,
 }
 
@@ -18,6 +27,13 @@ impl From<LexError> for ParseError {
     }
 }
 
+/// Parse source text into an owned syntax tree with byte spans.
+/// Empty input and blank lines are allowed; the final newline is optional.
+///
+/// # Errors
+///
+/// Tokenization runs first and preserves lexical error messages and spans.
+/// Parsing then stops at the first syntax or numeric-range error, returning no partial tree.
 pub fn parse(source: &str) -> Result<Program, ParseError> {
     let tokens = tokenize(source)?;
 

@@ -10,10 +10,15 @@ use crate::span::Span;
 /// A token's classification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenKind {
+    /// A keyword or reserved type name.
     Keyword(Keyword),
+    /// An ASCII variable name.
     Identifier,
+    /// A literal whose value is read by the parser.
     Literal(LiteralKind),
+    /// An assignment or comparison operator.
     Operator(Operator),
+    /// An opening or closing parenthesis.
     Delimiter(Delimiter),
     /// A line ending: LF, CRLF, or CR. CRLF spans two bytes.
     Newline,
@@ -21,13 +26,18 @@ pub enum TokenKind {
     Eof,
 }
 
-/// Keywords supported by the language.
+/// Keywords and reserved type names.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Keyword {
+    /// Variable declaration keyword `let`.
     Let,
+    /// Reserved word `int`.
     Int,
+    /// Reserved word `bool`.
     Bool,
+    /// Reserved word `float`.
     Float,
+    /// Output keyword `print`.
     Print,
 }
 
@@ -35,28 +45,41 @@ pub enum Keyword {
 /// and checks numeric ranges.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LiteralKind {
+    /// Decimal digits with an optional leading minus sign.
     Integer,
+    /// A decimal with digits on both sides of the point and an optional minus sign.
     Float,
+    /// `true` or `false`.
     Boolean,
+    /// Double-quoted text without escape processing.
     String,
 }
 
 /// Operators supported by the language.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Operator {
+    /// Initializer assignment (`=`).
     Assign,
+    /// Equality (`==`).
     Equal,
+    /// Inequality (`!=`).
     NotEqual,
+    /// Strict greater-than comparison (`>`).
     GreaterThan,
+    /// Greater-than-or-equal comparison (`>=`).
     GreaterThanOrEqual,
+    /// Strict less-than comparison (`<`).
     LessThan,
+    /// Less-than-or-equal comparison (`<=`).
     LessThanOrEqual,
 }
 
 /// Parentheses used as delimiters.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Delimiter {
+    /// Opening parenthesis (`(`).
     LeftParenthesis,
+    /// Closing parenthesis (`)`).
     RightParenthesis,
 }
 
@@ -66,6 +89,7 @@ pub enum Delimiter {
 /// passed to the lexer.
 #[derive(Debug)]
 pub struct Token {
+    /// The token's classification.
     pub kind: TokenKind,
     /// Half-open byte range `[start, end)` in the original UTF-8 source.
     ///

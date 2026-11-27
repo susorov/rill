@@ -12,10 +12,14 @@ use crate::span::Span;
 use crate::token::{Delimiter, Keyword, LiteralKind, Operator, Token, TokenKind};
 use std::fmt;
 
+/// The reason tokenization failed.
 #[derive(Debug, PartialEq, Eq)]
 pub enum LexErrorKind {
+    /// A character that cannot start a token.
     UnexpectedCharacter(char),
+    /// A string reached a line ending or EOF before its closing quote.
     UnterminatedString,
+    /// A decimal point was not immediately followed by a digit.
     ExpectedDigitAfterDecimalPoint,
 }
 
@@ -29,9 +33,15 @@ impl fmt::Display for LexErrorKind {
     }
 }
 
+/// A tokenization failure and its source location.
 #[derive(Debug, PartialEq, Eq)]
 pub struct LexError {
+    /// The reason tokenization stopped.
     pub kind: LexErrorKind,
+    /// Half-open byte range in the original source.
+    /// Unexpected characters cover one full UTF-8 character. Unterminated strings
+    /// span from the opening quote to the line ending or EOF, excluding the newline.
+    /// Malformed decimals span the numeric prefix through the decimal point.
     pub span: Span,
 }
 
@@ -44,6 +54,11 @@ impl fmt::Display for LexError {
 impl std::error::Error for LexError {}
 
 /// Tokenize source text, retaining byte spans into the original source.
+///
+/// # Errors
+///
+/// Returns the first [`LexError`] without partial tokens. Numeric ranges are
+/// checked by the parser.
 pub fn tokenize(source: &str) -> Result<Vec<Token>, LexError> {
     Lexer::new(source).tokenize()
 }
