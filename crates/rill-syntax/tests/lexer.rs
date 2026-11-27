@@ -5,6 +5,63 @@ use rill_syntax::span::Span;
 use rill_syntax::token::{Delimiter, Keyword, LiteralKind, Operator, TokenKind};
 
 #[test]
+fn tokenizes_if_else_and_nested_braces_with_spans() {
+    for newline in ["\n", "\r\n", "\r"] {
+        let source = ["if(true){}else", newline, "if false{{}}"].concat();
+        let start = 14 + newline.len();
+        let tokens = tokenize(&source).unwrap();
+
+        assert_eq!(
+            tokens
+                .iter()
+                .map(|token| (token.kind, token.span))
+                .collect::<Vec<_>>(),
+            vec![
+                (TokenKind::Keyword(Keyword::If), Span::new(0, 2)),
+                (
+                    TokenKind::Delimiter(Delimiter::LeftParenthesis),
+                    Span::new(2, 3),
+                ),
+                (TokenKind::Literal(LiteralKind::Boolean), Span::new(3, 7)),
+                (
+                    TokenKind::Delimiter(Delimiter::RightParenthesis),
+                    Span::new(7, 8),
+                ),
+                (TokenKind::Delimiter(Delimiter::LeftBrace), Span::new(8, 9)),
+                (
+                    TokenKind::Delimiter(Delimiter::RightBrace),
+                    Span::new(9, 10)
+                ),
+                (TokenKind::Keyword(Keyword::Else), Span::new(10, 14)),
+                (TokenKind::Newline, Span::new(14, start)),
+                (TokenKind::Keyword(Keyword::If), Span::new(start, start + 2)),
+                (
+                    TokenKind::Literal(LiteralKind::Boolean),
+                    Span::new(start + 3, start + 8),
+                ),
+                (
+                    TokenKind::Delimiter(Delimiter::LeftBrace),
+                    Span::new(start + 8, start + 9),
+                ),
+                (
+                    TokenKind::Delimiter(Delimiter::LeftBrace),
+                    Span::new(start + 9, start + 10),
+                ),
+                (
+                    TokenKind::Delimiter(Delimiter::RightBrace),
+                    Span::new(start + 10, start + 11),
+                ),
+                (
+                    TokenKind::Delimiter(Delimiter::RightBrace),
+                    Span::new(start + 11, start + 12),
+                ),
+                (TokenKind::Eof, Span::new(source.len(), source.len())),
+            ],
+        );
+    }
+}
+
+#[test]
 fn tokenizes_greater_than_and_greater_than_or_equal() {
     for (source, operator, end) in [
         ("1>2", Operator::GreaterThan, 2),
@@ -128,6 +185,7 @@ fn tokenizes_strings_as_single_tokens_with_quoted_byte_spans() {
         "hello world",
         "// not a comment",
         "true (42)",
+        "if { λ } else",
         "héЩ",
         "\\n",
         "\\",
@@ -197,7 +255,7 @@ fn rejects_raw_newlines_in_strings() {
 
 #[test]
 fn preserves_newlines_and_byte_offsets_after_comments() {
-    let comment = "// comment";
+    let comment = "// if { else }";
     for newline in ["\n", "\r\n", "\r"] {
         let source = format!("{comment}{newline}let x = 42");
         let start = comment.len() + newline.len();
@@ -263,6 +321,15 @@ fn keeps_keyword_like_names_as_identifiers() {
         "float_value",
         "floating",
         "float2",
+        "if_else",
+        "if1",
+        "ifelse",
+        "_if",
+        "elsewhere",
+        "else_if",
+        "else2",
+        "IF",
+        "Else",
     ] {
         let tokens = tokenize(source).unwrap();
 
@@ -522,8 +589,8 @@ fn assert_lexer_invariants(source: &str) {
 #[test]
 fn checks_invariants_for_generated_utf8_inputs() {
     const ALPHABET: &[char] = &[
-        'a', '_', '0', '9', '-', '.', '"', '/', '=', '!', '>', '<', '(', ')', ' ', '\t', '\n',
-        '\r', 'é', 'λ', 'ᮯ', '\\',
+        'a', '_', '0', '9', '-', '.', '"', '/', '=', '!', '>', '<', '(', ')', '{', '}', ' ', '\t',
+        '\n', '\r', 'é', 'λ', 'ᮯ', '\\',
     ];
 
     fn visit(source: &mut String, remaining: usize) {

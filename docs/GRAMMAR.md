@@ -33,7 +33,10 @@ Names may contain letters, digits, and underscores, but cannot start with a digi
 
 Variables must be declared before use. Redeclaration and reassignment are not allowed.
 
-Reserved words: `let`, `int`, `float`, `bool`, `true`, `false`, `print`.
+Reserved words: `let`, `if`, `else`, `int`, `float`, `bool`, `true`, `false`, `print`.
+
+`if` and `else` are reserved for planned conditional statements. The lexer
+recognizes these keywords and braces, but conditional statements are not yet supported.
 
 ## Printing
 

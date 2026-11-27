@@ -102,6 +102,14 @@ impl<'a> Lexer<'a> {
                     self.advance();
                     TokenKind::Delimiter(Delimiter::RightParenthesis)
                 }
+                b'{' => {
+                    self.advance();
+                    TokenKind::Delimiter(Delimiter::LeftBrace)
+                }
+                b'}' => {
+                    self.advance();
+                    TokenKind::Delimiter(Delimiter::RightBrace)
+                }
                 b'/' if self.peek_next() == Some(b'/') => {
                     self.skip_line_comment();
                     continue;
@@ -230,6 +238,8 @@ impl<'a> Lexer<'a> {
         // Classify only after consuming the complete identifier.
         match &self.source[start..self.pos] {
             "let" => TokenKind::Keyword(Keyword::Let),
+            "if" => TokenKind::Keyword(Keyword::If),
+            "else" => TokenKind::Keyword(Keyword::Else),
             "int" => TokenKind::Keyword(Keyword::Int),
             "bool" => TokenKind::Keyword(Keyword::Bool),
             "float" => TokenKind::Keyword(Keyword::Float),

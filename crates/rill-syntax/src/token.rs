@@ -18,7 +18,7 @@ pub enum TokenKind {
     Literal(LiteralKind),
     /// An assignment or comparison operator.
     Operator(Operator),
-    /// An opening or closing parenthesis.
+    /// An opening or closing parenthesis or brace.
     Delimiter(Delimiter),
     /// A line ending: LF, CRLF, or CR. CRLF spans two bytes.
     Newline,
@@ -31,6 +31,10 @@ pub enum TokenKind {
 pub enum Keyword {
     /// Variable declaration keyword `let`.
     Let,
+    /// Conditional keyword `if`.
+    If,
+    /// Alternative branch keyword `else`.
+    Else,
     /// Reserved word `int`.
     Int,
     /// Reserved word `bool`.
@@ -74,13 +78,17 @@ pub enum Operator {
     LessThanOrEqual,
 }
 
-/// Parentheses used as delimiters.
+/// Parentheses and braces used as delimiters.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Delimiter {
     /// Opening parenthesis (`(`).
     LeftParenthesis,
     /// Closing parenthesis (`)`).
     RightParenthesis,
+    /// Opening brace (`{`).
+    LeftBrace,
+    /// Closing brace (`}`).
+    RightBrace,
 }
 
 /// A token's type and location in the original source.

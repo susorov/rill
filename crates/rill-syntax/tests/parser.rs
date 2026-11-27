@@ -255,7 +255,7 @@ fn parses_boolean_declarations_with_source_spans() {
 
 #[test]
 fn rejects_reserved_words_as_variable_names() {
-    for keyword in ["let", "true", "false", "int", "bool", "float"] {
+    for keyword in ["let", "if", "else", "true", "false", "int", "bool", "float"] {
         let source = format!("let {keyword} = 42");
 
         assert_eq!(
